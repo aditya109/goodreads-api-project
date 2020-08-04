@@ -126,7 +126,8 @@ def link_navigator():
             # find number_of_books on the list
             html = driver.page_source
             soup = BeautifulSoup(html, features='lxml')
-            pp.pprint(soup)
+            for link in soup.find_all('a'):
+                print(link.get('href'))
 
 
         # number_of_books = element_grabber().text
