@@ -29,10 +29,10 @@ except Exception as e:
 config = configparser.ConfigParser()
 
 # for Aditya
-config.read("D:/Projects/config/config2.ini")
+# config.read("D:/Projects/config/config2.ini")
 
 # for Manel
-# config.read("./config.ini")
+config.read("./config.ini")
 # =======================================================
 CLIENT_KEY = config['credentials']['client_key']  # string
 CLIENT_SECRET = config['credentials']['client_secret']  # string
@@ -94,6 +94,10 @@ def response_to_json_dict(response):
 
 
 def link_navigator():
+
+    if os.name == "nt":
+        _ = os.system('cls')
+
     global driver
     # opening the goodreads website using selenium framework
     driver.get(ROOT_URL)
@@ -119,11 +123,12 @@ def link_navigator():
         sign_btn.click()
 
         for child_url in CHILD_URLS:
+            # find number_of_books on the list
+            html = driver.page_source
+            soup = BeautifulSoup(html, features='lxml')
+            pp.pprint(soup)
 
-            number_of_books = element_grabber("/html/body/div[2]/div[3]/div[1]/div[2]/div[3]/div[5]/div[3]/div[1]").text
-            print("Received # of books : " + number_of_books)
 
-            
         # number_of_books = element_grabber().text
         # print("Number of Books : " + number_of_books)
         # retrieval_count = 0
