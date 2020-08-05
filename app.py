@@ -1,8 +1,7 @@
 """For running this script, please ensure that `sample` directory has `resources` directory container chromedriver
 for your OS executable file, clone this repository for better usage.
-
-
 """
+from object_provider import book_provider, reviews_provider
 
 try:
     import json
@@ -17,6 +16,7 @@ try:
     from backports import configparser
     from bs4 import BeautifulSoup
     from collections import defaultdict
+    from helper import config_reader
     from selenium import webdriver
     from selenium.webdriver.common.by import By
     from selenium.webdriver.common.keys import Keys
@@ -25,27 +25,7 @@ try:
 except Exception as e:
     print(e)
 
-# reading the config files
-config = configparser.ConfigParser()
-
-# for Aditya
-# config.read("D:/Projects/config/config2.ini")
-
-# for Manel
-config.read("./config.ini")
-# =======================================================
-CLIENT_KEY = config['credentials']['client_key']  # string
-CLIENT_SECRET = config['credentials']['client_secret']  # string
-EMAIL_ID = config['credentials']['email_id']  # string
-PASSWORD = config['credentials']['password']  # string
-# =======================================================
-CHROMEDRIVER = config['resources-path']['chromedriver']
-GECKODRIVER = config['resources-path']['geckodriver']
-
-# =======================================================
-ROOT_URL = config['nav-links']['root_url']  # string
-CHILD_URLS = config['nav-links']['child_urls'].split(',')  # string
-# =======================================================
+CONFIG = config_reader()
 # identifying OS of the host
 print(f"Accessing OS ... Found : {platform.system()}")
 
@@ -55,7 +35,7 @@ chrome_options.add_argument("--headless")
 # declaring path for webdriver
 chrome_driver_path = f"./resources/{platform.system()}/chromedriver"
 # initializing Chrome webdriver with options `headless` and executable_path `\path\to\chromedriver`
-driver = webdriver.Chrome(options=chrome_options, executable_path=chrome_driver_path)
+driver = webdriver.Chrome(options=chrome_options, executable_path=chrome_driver_path, service_log_path="./chromedriver.log")
 driver.delete_all_cookies()
 
 # initializing a Pretty Printer
@@ -67,30 +47,9 @@ def element_grabber(param, by_type="xpath"):
     element = None
     if by_type == "xpath":
         element = driver.find_element(By.XPATH, param)
-    elif by_type == "id":
+    elif by_type == "ID":
         element = driver.find_element(By.ID, param)
     return element
-
-
-def response_to_json_dict(response):
-    # initializing a dict for storing response
-    dict_response = defaultdict()
-    # initializing an empty string
-    json_response = ""
-    # checking response status code
-    if response.status_code == 200:
-
-        print(f"Response Status Code : {response.status_code} ✔️")
-        # decoding byte-xml response to `utf-8` string
-        string_xml_response = response.content.decode("utf-8")
-        # parsing `utf-8` to json
-        json_response = json.dumps(xmltodict.parse(string_xml_response))
-        # converting json to dict
-        dict_response = json.loads(json_response)
-    else:
-        print(f"Response Status Code : {response.status_code} ❌")
-
-    return dict_response, json_response
 
 
 def link_navigator():
@@ -98,9 +57,13 @@ def link_navigator():
     if os.name == "nt":
         _ = os.system('cls')
 
+    print("Execution starts here 🔥 ..", end="\n\n")
+
     global driver
     # opening the goodreads website using selenium framework
-    driver.get(ROOT_URL)
+
+    print(f"Getting URL 🌍: {CONFIG['ROOT_URL']}", end="\n\n")
+    driver.get(CONFIG['ROOT_URL'])
     # logging into goodreads API as a developer
     try:
 
@@ -108,13 +71,13 @@ def link_navigator():
         email_input_box = element_grabber(
             "/html/body/div[2]/div[1]/div/div/div[1]/div/div/form/div[1]/input[1]")
         # sending the email as input to the above field
-        email_input_box.send_keys(EMAIL_ID)
+        email_input_box.send_keys(CONFIG['EMAIL_ID'])
 
         # grabbing the password field
         password_textbox = element_grabber(
             "/html/body/div[2]/div[1]/div/div/div[1]/div/div/form/div[2]/div/input")
         # sending the password as input to the above field
-        password_textbox.send_keys(PASSWORD)
+        password_textbox.send_keys(CONFIG['PASSWORD'])
 
         # grabbing sign in button
         sign_btn = element_grabber(
@@ -122,17 +85,56 @@ def link_navigator():
         # submitting the login form
         sign_btn.click()
 
-        for child_url in CHILD_URLS:
-            # find number_of_books on the list
+        for child_url in CONFIG['CHILD_URLS']:
+            print(f"Getting Child URL 🌍: {child_url}", end="\n\n")
+            driver.get(child_url)
             html = driver.page_source
             soup = BeautifulSoup(html, features='lxml')
-            for link in soup.find_all('a'):
-                print(link.get('href'))
+
+            # Find number of books provided by the link
+            t = soup.find('div', attrs={'class':'stacked'})
+            number_of_books = t.find('div').get_text().strip().split(" books")[0]
 
 
-        # number_of_books = element_grabber().text
-        # print("Number of Books : " + number_of_books)
-        # retrieval_count = 0
+            print(f"# books found = {number_of_books}", end="\n\n")
+
+            # find all the books in one page
+            table_rows = soup.find_all('tr')
+
+            for table_row in table_rows:
+                a_tag = table_row.find('a', attrs={'class':'bookTitle'})
+                id = re.findall(r'(\d{1,11})', a_tag['href'])[0]
+                print(f"Redirecting URL : {CONFIG['ROOT_URL'][:len(CONFIG['ROOT_URL']) - 1] + a_tag['href']}")
+                span = a_tag.find('span')
+
+                title = span.get_text().split('(')[0].strip()
+
+                a_tag = table_row.find('a', attrs={'class':'authorName'})
+                span = a_tag.find('span', attrs={'itemprop':'name'})
+                author = span.get_text()
+
+                print(f"Accessing {title} by {author} with ID:{id} ...")
+
+                # pulling book info from bookreads api
+                book, reviews_url = book_provider(book_id=id)
+
+                # book.Wingardium_Leviosa()
+                driver.get(reviews_url)
+                html = driver.page_source
+                
+
+                reviews = reviews_provider(reviews_url)
+
+
+
+
+
+
+                break
+            break
+
+
+
 
     except Exception as exception:
         print(exception)
