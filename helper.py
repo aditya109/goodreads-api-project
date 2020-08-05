@@ -1,7 +1,6 @@
-import configparser
-
 try:
     import xmltodict
+    import configparser
     import collections
     import json
 except Exception as e:
@@ -51,5 +50,11 @@ def config_reader():
     CONFIG['CHILD_URLS'] = config['nav-links']['child_urls'].split(',')  # string
 
     CONFIG['BOOK_INFO_ENDPOINT'] = config['api-route']['book_info_endpoint']
+
+    CONFIG['HOST_NAME'] = config['db-config']['host_name']
+    CONFIG['DB'] = config['db-config']['db']
+    CONFIG['PORT'] = config['db-config']['port']
+    CONFIG['USERNAME'] = config['db-config']['username']
+    CONFIG['PASSWORD'] = config['db-config']['password']
 
     return CONFIG

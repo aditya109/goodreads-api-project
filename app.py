@@ -121,9 +121,20 @@ def link_navigator():
                 # book.Wingardium_Leviosa()
                 driver.get(reviews_url)
                 html = driver.page_source
-                
+                with open("index.html", "w") as file:
+                    file.write(html)
+                # soup = BeautifulSoup(html, features='lxml')
+                # reviews_links_in_a_page = soup.find_all('div')
+                # print(reviews_links_in_a_page[0])
 
-                reviews = reviews_provider(reviews_url)
+                # for review_link in reviews_links_in_a_page:
+                #     review_url = re.findall(r'(\d{1,11})', review_link.get('href'))[0]
+                #     print(review_url)
+                #
+                #     driver.get(reviews_url)
+                #
+                #     break
+                # reviews = reviews_provider(reviews_url)
 
 
 
