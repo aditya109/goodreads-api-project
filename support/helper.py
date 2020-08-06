@@ -24,7 +24,7 @@ def response_to_json_dict(response):
     else:
         print(f"Response Status Code : {response.status_code} ❌", end="\n\n")
 
-    return dict_response
+    return dict_response, json_response
 
 def config_reader():
     # reading the config files
@@ -51,10 +51,8 @@ def config_reader():
 
     CONFIG['BOOK_INFO_ENDPOINT'] = config['api-route']['book_info_endpoint']
 
-    CONFIG['HOST_NAME'] = config['db-config']['host_name']
-    CONFIG['DB'] = config['db-config']['db']
-    CONFIG['PORT'] = config['db-config']['port']
-    CONFIG['USERNAME'] = config['db-config']['username']
-    CONFIG['PASSWORD'] = config['db-config']['password']
+    CONFIG['DB-CONFIG'] = config['db-config']
+
+    CONFIG['SQL_QUERIES'] = config['sql-query']['q'].split(",")
 
     return CONFIG

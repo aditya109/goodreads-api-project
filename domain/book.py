@@ -87,7 +87,7 @@ class Book:
         self.average_ratings = value
 
     def Wingardium_Leviosa(self):
-        return f"Book Name : {self.book_name}\n" \
+        print( f"Book Name : {self.book_name}\n" \
                f"Authors : {self.authors}\n" \
                f"ID(Goodreads) : {self.id}\n" \
                f"ISBN : {self.isbn}\n" \
@@ -98,7 +98,7 @@ class Book:
                f"Ratings Sum : {self.ratings_sum}\n" \
                f"Ratings Count : {self.ratings_count}\n" \
                f"Text Reviews Count : {self.text_reviews_count}\n" \
-               f"Average Ratings : {self.average_ratings}"
+               f"Average Ratings : {self.average_ratings}")
 
 
 class BookBuilder:

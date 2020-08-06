@@ -1,7 +1,9 @@
 """For running this script, please ensure that `sample` directory has `resources` directory container chromedriver
 for your OS executable file, clone this repository for better usage.
 """
-from object_provider import book_provider, reviews_provider
+import io
+
+from object_provider import book_provider
 
 try:
     import json
@@ -16,7 +18,7 @@ try:
     from backports import configparser
     from bs4 import BeautifulSoup
     from collections import defaultdict
-    from helper import config_reader
+    from support.helper import config_reader
     from selenium import webdriver
     from selenium.webdriver.common.by import By
     from selenium.webdriver.common.keys import Keys
@@ -118,11 +120,19 @@ def link_navigator():
                 # pulling book info from bookreads api
                 book, reviews_url = book_provider(book_id=id)
 
-                # book.Wingardium_Leviosa()
-                driver.get(reviews_url)
-                html = driver.page_source
-                with open("index.html", "w") as file:
-                    file.write(html)
+                book.Wingardium_Leviosa()
+                # reviews_url = reviews_url.replace('DEVELOPER_ID', CONFIG['CLIENT_KEY'])
+                print("====>")
+                # print(reviews_url)
+                if reviews_url.find("isbn"):
+                    reviews_url += f"&isbn={book.get_isbn()}"
+
+                reviews_url.replace("DEVELOPER_ID", CONFIG['CLIENT_KEY'])
+                print(reviews_url)
+
+                response = requests.get()
+                with io.open("index.html", "w", encoding="utf-8") as f:
+                    f.write(html)
                 # soup = BeautifulSoup(html, features='lxml')
                 # reviews_links_in_a_page = soup.find_all('div')
                 # print(reviews_links_in_a_page[0])
@@ -166,3 +176,11 @@ if __name__ == "__main__":
     # clearing screen
     if os.name == "nt":
         _ = os.system('cls')
+
+
+"""
+https://www.goodreads.com/api/reviews_widget_iframe?did=DEVELOPER_ID&amp;format=html&amp;isbn=0689840926&amp;links=660&amp;min_rating=&amp;review_back=fff&amp;stars=000&amp;text=000
+https://www.goodreads.com/api/reviews_widget_iframe?did=DEVELOPER_ID&amp;format=html&amp;links=660&amp;min_rating=&amp;review_back=fff&amp;stars=000&amp;text=000
+https://www.goodreads.com/api/reviews_widget_iframe?did=DEVELOPER_ID&amp;format=html&amp;isbn=0689840926&amp;links=660&amp;min_rating=&amp;review_back=fff&amp;stars=000&amp;text=000
+
+"""

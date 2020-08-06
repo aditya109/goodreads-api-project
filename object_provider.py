@@ -1,4 +1,5 @@
 import json
+import re
 
 from bs4 import BeautifulSoup
 
@@ -6,7 +7,7 @@ from domain.book import BookBuilder
 
 try:
     import requests
-    from helper import config_reader, response_to_json_dict
+    from support.helper import config_reader, response_to_json_dict
 except Exception as e:
     print(e)
 
@@ -19,7 +20,7 @@ def book_provider(book_id):
     response = requests.get(url)
 
     print("Request sent 📨")
-    dict_response = response_to_json_dict(response)
+    dict_response, json_response = response_to_json_dict(response)
 
     # using Builder to initialize Book object
     book = BookBuilder.initialize()
@@ -43,10 +44,18 @@ def book_provider(book_id):
 
     # adding ISBN
     isbn = dict_response['GoodreadsResponse']['book']['isbn']
+    if isbn == "":
+        print("No ISBN.. Using regex to explicit scrapping...")
+    else:
+        isbn = re.findall(r'ISBN (\d{10})', json_response)[0]
     book = book.hasISBN(isbn)
 
     # adding ISBN13
     isbn13 = dict_response['GoodreadsResponse']['book']['isbn13']
+    if isbn13 == "":
+        print("No ISBN.. Using regex to explicit scrapping...")
+    else:
+        isbn13 = re.findall(r'ISBN13: (\d{13})', json_response)[0]
     book = book.hasISBN13(isbn13)
 
     # adding Publication Date
@@ -82,7 +91,7 @@ def book_provider(book_id):
     review_widgets_json = json.loads(json.dumps(reviews_widget))
 
     soup = BeautifulSoup(review_widgets_json, features="html.parser")
-    reviews_url = soup.find('iframe').get('src').replace('DEVELOPER_ID', CONFIG['CLIENT_KEY']).replace("amp;","")
+    reviews_url = soup.find('iframe').get('src')
     return book.build(), reviews_url
 
 
