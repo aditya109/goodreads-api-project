@@ -124,14 +124,17 @@ def link_navigator():
                     # pulling book info from bookreads api
                     book, reviews_url = book_provider(book_id=ID)
 
-                    # book.Wingardium_Leviosa()
-
                     if reviews_url.find("isbn") == -1:
                         reviews_url += f"&isbn={book.get_isbn()}"
 
                     reviews_url = reviews_url.replace("DEVELOPER_ID", CONFIG['CLIENT_KEY'])
 
-                    review, reviewer = reviews_provider(reviews_url, book.get_id())
+                    reviews_provider(reviews_url, driver, book.get_id())
+                    # break
+                # break
+            # break
+
+
 
                     # store book, review, reviewer
 
@@ -148,6 +151,8 @@ if __name__ == "__main__":
         _ = os.system('cls')
     oauth_validator()
     link_navigator()
+
+    # reviews_provider(url, driver, "2429135")
     clean_up()
     input("\n\n\nPress enter to exit 🚀...")
 

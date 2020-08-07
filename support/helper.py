@@ -21,7 +21,7 @@ def response_to_json_dict(response):
     # checking response status code
     if response.status_code == 200:
 
-        print(f"Response Status Code : {response.status_code} ✔️", end="\n\n")
+        # print(f"Response Status Code : {response.status_code} ✔️", end="\n\n")
         # decoding byte-xml response to `utf-8` string
         string_xml_response = response.content.decode("utf-8")
         # parsing `utf-8` to json

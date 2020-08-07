@@ -90,10 +90,14 @@ def book_provider(book_id):
 
     soup = BeautifulSoup(review_widgets_json, features="html.parser")
     reviews_url = soup.find('iframe').get('src')
-    return book.build(), reviews_url
+
+    book = book.build()
+
+    # api request need to be done there
+    return book, reviews_url
 
 
-def reviews_provider(reviews_url, book_id):
+def reviews_provider(reviews_url, driver,book_id):
     page = 0
     while True:
         page += 1
@@ -103,17 +107,17 @@ def reviews_provider(reviews_url, book_id):
         html = response.content
         soup = make_html_soup(html)
 
-        if soup.find('div', attrs={'class':'gr_reviews_showing'}).get_text().strip().find("No reviews found"):
+        reviews_links_in_a_page = soup.find_all('a', attrs={'class': 'gr_more_link'})
+        if len(reviews_links_in_a_page) == 0:
             break
 
-        reviews_links_in_a_page = soup.find_all('a', attrs={'class': 'gr_more_link'})
         for review_link in reviews_links_in_a_page:
+
             review = ReviewBuilder.initialize()
             review_url = review_link.get('href')
-            response = requests.get(review_url)
-            html = response.content
+            driver.get(review_url)
+            html = driver.page_source
             soup = make_html_soup(html)
-            print("====>")
             review_id = re.findall(r'(\d{1,13})', review_url)[0]
             review = review.hasReviewID(review_id)
 
@@ -135,10 +139,10 @@ def reviews_provider(reviews_url, book_id):
             review = review.hasBookId(book_id)
             review = review.build()
 
-            print("=======================================================================")
-            # review.Wingardium_Leviosa()
+            print("=========================================================================================")
             reviewer = reviewer_provider(reviewer_id)
-            # reviewer.Wingardium_Leviosa()
+
+            # api request to be done here
 
 
 def reviewer_provider(reviewer_id):
@@ -221,11 +225,10 @@ def reviewer_provider(reviewer_id):
                 followers = []
             else:
                 for f in followers_:
-                    print(f"{reviewer_name} is being followed : {f['name']}")
                     followers.append(f['id'])
 
             followers_end_count = dict_response['GoodreadsResponse']['followers']['@end']
-            print(f"Pulled {followers_end_count} out of {total_number_of_followers} following")
+            print(f"Pulled {followers_end_count} out of {total_number_of_followers} followers")
             if followers_end_count == total_number_of_followers:
                 break
 

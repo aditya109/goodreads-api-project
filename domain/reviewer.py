@@ -35,7 +35,7 @@ class Reviewer:
               f"Number Of Reviews : {self.number_of_reviews}\n"
               f"Friends Count : {self.friends_count}\n"
               f"Following : {self.following}\n"
-              f"Followers : {self.followers}"
+              f"Followers : {self.followers}\n"
               f"Shelves : {len(self.shelves)}\n"
               )
         for shelf in self.shelves:
@@ -48,6 +48,7 @@ class Shelf:
         self.shelf_name = shelf_name
         self.book_count = book_count
 
+
     def get_shelf_id(self):
         return self.shelf_id
 
@@ -58,9 +59,9 @@ class Shelf:
         return self.book_count
 
     def __str__(self):
-        return f"=====================================" \
-               f"Shelf Name : {self.shelf_name}\n" \
-               f"Shelf ID : {self.shelf_id}\n" \
+        return f"=====================================\n" \
+               f"Shelf Name : {self.shelf_name}  " \
+               f"Shelf ID : {self.shelf_id} " \
                f"Book Count : {self.book_count}"
 
 
