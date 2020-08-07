@@ -36,6 +36,7 @@ def response_to_json_dict(response):
 
 
 def auth_config_reader():
+    # Provides OAuth access tokens and access token secret
     config = configparser.ConfigParser()
     CONFIG = dict()
 
@@ -51,10 +52,10 @@ def config_reader():
     CONFIG = dict()
 
     # for Aditya
-    config.read("D:/Projects/config/config2.ini")
+    # config.read("D:/Projects/config/config2.ini")
 
     # for Manel
-    # config.read("./config.ini")
+    config.read("./config.ini")
 
     CONFIG['CLIENT_KEY'] = config['credentials']['client_key']  # string
     CONFIG['CLIENT_SECRET'] = config['credentials']['client_secret']  # string
@@ -73,14 +74,13 @@ def config_reader():
     CONFIG['FOLLOWING_INFO_ENDPOINT'] = config['api-route']['following_info_endpoint']
     CONFIG['FOLLOWERS_INFO_ENDPOINT'] = config['api-route']['followers_info_endpoint']
 
-    CONFIG['DB-CONFIG'] = config['db-config']
-
     CONFIG['FILETYPE'] = config['settings']['filetype']
 
     return CONFIG
 
 
 def make_html_soup(html):
+    # return BeautifulSoup object
     return BeautifulSoup(html, features='lxml')
 
 

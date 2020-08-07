@@ -1,7 +1,6 @@
 """For running this script, please ensure that `sample` directory has `resources` directory container chromedriver
 for your OS executable file, clone this repository for better usage.
 """
-from associate_runner import book_provider, reviews_provider, write_book_object_to_file, write_review_object_to_file, write_reviewer_object_to_file
 
 try:
     import json
@@ -18,6 +17,8 @@ try:
     from collections import defaultdict
     from support.helper import config_reader, make_html_soup, oauth_validator, clean_up, get_auth_api_response, \
         file_creator
+    from associate_runner import book_provider, reviews_provider, write_book_object_to_file, \
+        write_review_object_to_file, write_reviewer_object_to_file
     from selenium import webdriver
     from selenium.webdriver.common.by import By
     from selenium.webdriver.common.keys import Keys
@@ -26,6 +27,7 @@ try:
 except Exception as e:
     print(e)
 
+# getting a config from config.ini
 CONFIG = config_reader()
 # identifying OS of the host
 print(f"Accessing OS ... Found : {platform.system()}")
@@ -38,18 +40,25 @@ chrome_driver_path = f"./resources/{platform.system()}/chromedriver"
 # initializing Chrome webdriver with options `headless` and executable_path `\path\to\chromedriver`
 driver = webdriver.Chrome(options=chrome_options, executable_path=chrome_driver_path,
                           service_log_path="./chromedriver.log")
+# deleting all the existing cookies of the headless browser
 driver.delete_all_cookies()
 
+# getting the defined extension
 extension = CONFIG['FILETYPE']
+# providing names to the files
 filenames = ['book', 'review', 'reviewer']
+# adding extensions to the file names
 for idx, filename in enumerate(filenames):
     filenames[idx] = filenames[idx] + '.csv'
+# getting file pointer for the file
 book_file, review_file, reviewer_file = file_creator(filenames)
+# initializing files for csvs
 write_book_object_to_file(book_file, None, mode="init")
 write_review_object_to_file(review_file, None, mode="init")
 write_reviewer_object_to_file(reviewer_file, None, mode="init")
 
 def element_grabber(param, by_type="xpath"):
+    #  Grabbing elements by either xpath or id using find_element() in driver for our Selenium
     global driver
     element = None
     if by_type == "xpath":
@@ -94,10 +103,13 @@ def link_navigator():
             page = 0
             while True:
                 page += 1
+                # appending pages to the url
                 child_url = child_url + f"?page={page}"
                 print(f"Getting Child URL 🌍: {child_url}", end="\n\n")
                 driver.get(child_url)
+                # grabbing the page source of the webpage
                 html = driver.page_source
+                # now we make a Beautiful Soup out of the html
                 soup = make_html_soup(html)
 
                 # Find number of books provided by the link
@@ -128,9 +140,10 @@ def link_navigator():
                     # pulling book info from bookreads api
                     book, reviews_url = book_provider(ID, book_file)
 
+                    # explicitly imbibing ISBN into links using regular expressions
                     if reviews_url.find("isbn") == -1:
                         reviews_url += f"&isbn={book.get_isbn()}"
-
+                    # replacing the word DEVELOPER_ID with key
                     reviews_url = reviews_url.replace("DEVELOPER_ID", CONFIG['CLIENT_KEY'])
 
                     reviews_provider(reviews_url, driver, book.get_id(), review_file, reviewer_file)
@@ -144,6 +157,7 @@ def link_navigator():
     except Exception as exception:
         traceback.print_exc()
     finally:
+        # finally quiting the the driver
         driver.quit()
 
 
@@ -152,9 +166,10 @@ if __name__ == "__main__":
     # clearing screen
     if os.name == "nt":
         _ = os.system('cls')
+    # Registering the app.py with OAuth
     oauth_validator()
     link_navigator()
-    # book_provider("2429135",book_file)
+    # cleaning up project, closing files, etc
     clean_up([book_file, review_file, reviewer_file])
     input("\n\n\nPress enter to exit 🚀...")
 
