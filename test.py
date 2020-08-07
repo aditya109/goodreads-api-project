@@ -1,28 +1,29 @@
-# Get a real consumer key & secret from: https://www.goodreads.com/api/keys
-import requests
-from rauth import OAuth1Service
+from rauth import OAuth1Session
 
-CONSUMER_KEY = 'OKwj2qRaOnsUBJqogIu8tw'
-CONSUMER_SECRET = 'SJaIMqMXnskoF7Tlabf63WkbaADRCWt0ZmeREIohow'
+from support.helper import config_reader, oauth_validator, response_to_json_dict, auth_config_reader, \
+    get_auth_api_response
 
-goodreads = OAuth1Service(
-    consumer_key=CONSUMER_KEY,
-    consumer_secret=CONSUMER_SECRET,
-    name='goodreads',
-    request_token_url='https://www.goodreads.com/oauth/request_token',
-    authorize_url='https://www.goodreads.com/oauth/authorize',
-    access_token_url='https://www.goodreads.com/oauth/access_token',
-    base_url='https://www.goodreads.com/friend/user/80369?format=xml&key=OKwj2qRaOnsUBJqogIu8tw'
-    )
+CONFIG=config_reader()
+key=CONFIG['CLIENT_KEY']
+secret=CONFIG['CLIENT_SECRET']
+url=CONFIG['FOLLOWING_INFO_ENDPOINT']
 
-# head_auth=True is important here; this doesn't work with oauth2 for some reason
-request_token, request_token_secret = goodreads.get_request_token(header_auth=True)
-authorize_url = goodreads.get_authorize_url(request_token)
-print ('Visit this URL in your browser: ' + authorize_url)
-accepted = 'n'
-while accepted.lower() == 'n':
-    # you need to access the authorize_link via a browser,
-    # and proceed to manually authorize the consumer
-    accepted = input('Have you authorized me? (y/n) ')
-url = ("https://www.goodreads.com/friend/user/80369?format=xml&key=OKwj2qRaOnsUBJqogIu8tw")
-response = requests.get(url)
+CONFIG=auth_config_reader()
+access_token=CONFIG['ACCESS_TOKEN']
+access_token_secret = CONFIG['ACCESS_TOKEN_SECRET']
+
+oauth_validator()
+url = url.replace('USERID', '1022982')
+print(url)
+new_session = OAuth1Session(
+    consumer_key = key,
+    consumer_secret = secret,
+    access_token = access_token,
+    access_token_secret = access_token_secret,
+)
+data = {'key':'OKwj2qRaOnsUBJqogIu8tw'}
+response = new_session.get(url=url, params=data)
+dict_response, json_response = response_to_json_dict(response)
+print(dict_response)
+
+# https://www.goodreads.com/user/show/1022982.xml?key=OKwj2qRaOnsUBJqogIu8tw

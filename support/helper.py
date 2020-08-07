@@ -1,3 +1,9 @@
+import os
+
+import requests
+from bs4 import BeautifulSoup
+from rauth import OAuth1Service, OAuth1Session
+
 try:
     import xmltodict
     import configparser
@@ -5,6 +11,7 @@ try:
     import json
 except Exception as e:
     print(e)
+
 
 def response_to_json_dict(response):
     # initializing a dict for storing response
@@ -26,9 +33,21 @@ def response_to_json_dict(response):
 
     return dict_response, json_response
 
+
+def auth_config_reader():
+    config = configparser.ConfigParser()
+    CONFIG = dict()
+
+    config.read("auth.ini")
+    CONFIG['ACCESS_TOKEN'] = config['SESSION']['access_token']
+    CONFIG['ACCESS_TOKEN_SECRET'] = config['SESSION']['access_token_secret']
+    return CONFIG
+
+
 def config_reader():
     # reading the config files
     config = configparser.ConfigParser()
+    CONFIG = dict()
 
     # for Aditya
     config.read("D:/Projects/config/config2.ini")
@@ -36,7 +55,6 @@ def config_reader():
     # for Manel
     # config.read("./config.ini")
 
-    CONFIG = dict()
     CONFIG['CLIENT_KEY'] = config['credentials']['client_key']  # string
     CONFIG['CLIENT_SECRET'] = config['credentials']['client_secret']  # string
 
@@ -50,9 +68,89 @@ def config_reader():
     CONFIG['CHILD_URLS'] = config['nav-links']['child_urls'].split(',')  # string
 
     CONFIG['BOOK_INFO_ENDPOINT'] = config['api-route']['book_info_endpoint']
+    CONFIG['REVIEWER_INFO_ENDPOINT'] = config['api-route']['reviewer_info_endpoint']
+    CONFIG['FOLLOWING_INFO_ENDPOINT'] = config['api-route']['following_info_endpoint']
+    CONFIG['FOLLOWERS_INFO_ENDPOINT'] = config['api-route']['followers_info_endpoint']
 
     CONFIG['DB-CONFIG'] = config['db-config']
 
-    CONFIG['SQL_QUERIES'] = config['sql-query']['q'].split(",")
-
     return CONFIG
+
+
+def make_html_soup(html):
+    return BeautifulSoup(html, features='lxml')
+
+
+def get_api_response(url, field, value):
+    CONFIG = config_reader()
+    url = url.replace(field, value).replace('DEVELOPER_ID', CONFIG['CLIENT_KEY'])
+    # print(f"Request sent 📨 👉 URL : {url}")
+    response = requests.get(url)
+
+    return response_to_json_dict(response)
+
+
+def get_auth_api_response(url, field, value, page):
+    key, secret, access_token, access_token_secret = config_reader()['CLIENT_KEY'], config_reader()['CLIENT_SECRET'], \
+                                                     auth_config_reader()['ACCESS_TOKEN'], auth_config_reader()[
+                                                         'ACCESS_TOKEN_SECRET']
+    url = url.replace(field, value)
+    # print(f"Request sent 📨 👉 URL : {url}")
+    new_session = OAuth1Session(
+        consumer_key=key,
+        consumer_secret=secret,
+        access_token=access_token,
+        access_token_secret=access_token_secret,
+    )
+    params = {'key': key, 'page': page}
+    response = new_session.get(url=url, params=params)
+    return response_to_json_dict(response)
+
+
+def oauth_validator():
+    CONFIG = config_reader()
+    key, secret = CONFIG['CLIENT_KEY'], CONFIG['CLIENT_SECRET']
+
+    goodreads = OAuth1Service(
+        consumer_key=key,
+        consumer_secret=secret,
+        name='goodreads',
+        request_token_url='https://www.goodreads.com/oauth/request_token',
+        authorize_url='https://www.goodreads.com/oauth/authorize',
+        access_token_url='https://www.goodreads.com/oauth/access_token',
+        base_url='https://www.goodreads.com/'
+    )
+    # head_auth=True is important here; this doesn't work with oauth2 for some reason
+    request_token, request_token_secret = goodreads.get_request_token(header_auth=True)
+
+    authorize_url = goodreads.get_authorize_url(request_token)
+    print('Visit this URL in your browser: ' + authorize_url)
+    accepted = 'n'
+    while accepted.lower() == 'n':
+        # you need to access the authorize_link via a browser,
+        # and proceed to manually authorize the consumer
+        accepted = input('Have you authorized me? (y/n) ')
+
+    session = goodreads.get_auth_session(request_token, request_token_secret)
+
+    # these values are what you need to save for subsequent access.
+    ACCESS_TOKEN = session.access_token
+    ACCESS_TOKEN_SECRET = session.access_token_secret
+
+    config = configparser.ConfigParser()
+
+    config['SESSION'] = {
+        'access_token': ACCESS_TOKEN,
+        'access_token_secret': ACCESS_TOKEN_SECRET
+    }
+
+    with open('auth.ini', 'w') as configfile:
+        config.write(configfile)
+
+
+def clean_up():
+    try:
+        os.remove("auth.ini")
+    except Exception as E:
+        print("Error in removing auth.ini. Kindly remove it manually !")
+        print(E)
