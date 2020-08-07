@@ -1006,3 +1006,4 @@ MigrationBackup/
 # End of https://www.toptal.com/developers/gitignore/api/visualstudio,pycharm+all,pycharm+iml,pycharm,intellij,intellij+all,intellij+iml,python,java,node,react
 /.idea
 *.log
+*.csv
