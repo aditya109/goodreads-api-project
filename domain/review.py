@@ -92,7 +92,7 @@ class ReviewBuilder:
     def build(self):
         return Review(self.review_id, self.reviewer_id, self.rating, self.likes, self.review, self.book_id)
 
-# obj = ReviewBuilder.initialize() obj = obj.hasReviewID("").byReviewerName("").byReviewerID("").hasRating(
+# reviewer = ReviewBuilder.initialize() reviewer = reviewer.hasReviewID("").byReviewerName("").byReviewerID("").hasRating(
 # "").hasLikes("").hasBookId("").hasBookISBN("").build()
 #
-# obj.Wingardium_Leviosa()
+# reviewer.Wingardium_Leviosa()

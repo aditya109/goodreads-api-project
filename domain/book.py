@@ -174,7 +174,7 @@ class BookBuilder:
                     self.text_reviews_count, self.average_ratings)
 
 #
-# obj = BookBuilder.initialize().withBookName("The Girl with the Dragon Tattoo").hasAuthors(["Stieg Larsson", "Reg Keeland"]).hasId("2429135").wasPublishedOn("16-9-2008").hasBestBookId("2429135").hasReviewsCount("3677258").hasRatingsSum(
+# reviewer = BookBuilder.initialize().withBookName("The Girl with the Dragon Tattoo").hasAuthors(["Stieg Larsson", "Reg Keeland"]).hasId("2429135").wasPublishedOn("16-9-2008").hasBestBookId("2429135").hasReviewsCount("3677258").hasRatingsSum(
 #         "10596196").hasRatingsCount("2561726").hasTextReviewsCount("68261").hasAverageRatings("4.14").build()
 #
-# print(obj)
+# print(reviewer)

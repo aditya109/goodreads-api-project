@@ -5,8 +5,8 @@ class Reviewer:
         self.shelves = shelves
         self.number_of_reviews = number_of_reviews
         self.friends_count = friends_count
-        self.following = following  # list of reviewer ids
-        self.followers = followers  # list of reviewer ids
+        self.following = following
+        self.followers = followers
 
     def get_reviewer_name(self):
         return self.reviewer_name

@@ -1,4 +1,5 @@
 import os
+import traceback
 
 import requests
 from bs4 import BeautifulSoup
@@ -74,6 +75,8 @@ def config_reader():
 
     CONFIG['DB-CONFIG'] = config['db-config']
 
+    CONFIG['FILETYPE'] = config['settings']['filetype']
+
     return CONFIG
 
 
@@ -148,9 +151,21 @@ def oauth_validator():
         config.write(configfile)
 
 
-def clean_up():
+def clean_up(files):
     try:
         os.remove("auth.ini")
+        for file in files:
+            file.close()
     except Exception as E:
         print("Error in removing auth.ini. Kindly remove it manually !")
-        print(E)
+        traceback.print_exc()
+
+
+
+
+def file_creator(filenames):
+    files = []
+    for filename in filenames:
+        file = open(filename, "w", newline='')
+        files.append(file)
+    return files

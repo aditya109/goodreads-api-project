@@ -1,13 +1,15 @@
-import json
-import re
 
-from bs4 import BeautifulSoup
-
-from domain.book import BookBuilder
-from domain.review import ReviewBuilder
-from domain.reviewer import ShelfBuilder, ReviewerBuilder
 
 try:
+    import json
+    import csv
+    import re
+
+    from bs4 import BeautifulSoup
+
+    from domain.book import BookBuilder
+    from domain.review import ReviewBuilder
+    from domain.reviewer import ShelfBuilder, ReviewerBuilder
     import requests
     from support.helper import config_reader, response_to_json_dict, make_html_soup, get_api_response, oauth_validator, \
         get_auth_api_response
@@ -15,16 +17,18 @@ except Exception as e:
     print(e)
 
 
-def book_provider(book_id):
+def book_provider(book_id, file):
     CONFIG = config_reader()
 
-    dict_response, json_response = get_api_response(CONFIG['BOOK_INFO_ENDPOINT'], "BOOKID", book_id)
+    dict_response, json_response = get_api_response(
+        CONFIG['BOOK_INFO_ENDPOINT'], "BOOKID", book_id)
 
     # using Builder to initialize Book object
     book = BookBuilder.initialize()
 
     # initializing Book Title
-    book_title = dict_response['GoodreadsResponse']['book']['title'].split('(')[0].strip()
+    book_title = dict_response['GoodreadsResponse']['book']['title'].split('(')[
+        0].strip()
     book = book.withBookName(book_title)
 
     # adding authors as a list
@@ -93,11 +97,11 @@ def book_provider(book_id):
 
     book = book.build()
 
-    # api request need to be done there
+    write_book_object_to_file(file, book, "normal")
     return book, reviews_url
 
 
-def reviews_provider(reviews_url, driver,book_id):
+def reviews_provider(reviews_url, driver, book_id, review_file, reviewer_file):
     page = 0
     while True:
         page += 1
@@ -107,12 +111,12 @@ def reviews_provider(reviews_url, driver,book_id):
         html = response.content
         soup = make_html_soup(html)
 
-        reviews_links_in_a_page = soup.find_all('a', attrs={'class': 'gr_more_link'})
+        reviews_links_in_a_page = soup.find_all(
+            'a', attrs={'class': 'gr_more_link'})
         if len(reviews_links_in_a_page) == 0:
             break
 
         for review_link in reviews_links_in_a_page:
-
             review = ReviewBuilder.initialize()
             review_url = review_link.get('href')
             driver.get(review_url)
@@ -122,33 +126,43 @@ def reviews_provider(reviews_url, driver,book_id):
             review = review.hasReviewID(review_id)
 
             reviewer_page = soup.find('h1').find('a').get('href')
-            print(f"Reviewer's Home Page Link : {'https://www.goodreads.com' + reviewer_page}")
+            print(
+                f"Reviewer's Home Page Link : {'https://www.goodreads.com' + reviewer_page}")
 
             reviewer_id = re.findall(r'(\d{1,13})', reviewer_page)[0]
             review = review.byReviewerID(reviewer_id)
 
-            rating = soup.find('meta', attrs={'itemprop': 'ratingValue'}).get('content')
+            rating = soup.find(
+                'meta', attrs={'itemprop': 'ratingValue'}).get('content')
             review = review.hasRating(rating)
 
-            review_text = soup.find('div', attrs={'itemprop': 'reviewBody'}).get_text().strip()
+            review_text = soup.find(
+                'div', attrs={'itemprop': 'reviewBody'}).get_text().strip()
             review = review.hasText(review_text)
 
-            likes = soup.find('span', attrs={'class': 'likesCount'}).get_text().split(' likes')[0].strip()
+            likes = soup.find('span', attrs={'class': 'likesCount'}).get_text().split(
+                ' likes')[0].strip()
             review = review.hasLikes(likes)
 
             review = review.hasBookId(book_id)
             review = review.build()
 
-            print("=========================================================================================")
+            print(
+                "=========================================================================================")
             reviewer = reviewer_provider(reviewer_id)
 
-            # api request to be done here
+            # Attempting write on reviewer
+            # print("====> Attempting write on review")
+            write_review_object_to_file(review_file, review, "normal")
+            # print("====> Attempting write on reviewer")
+            write_reviewer_object_to_file(reviewer_file, reviewer, "normal")
 
 
 def reviewer_provider(reviewer_id):
     CONFIG = config_reader()
     reviewer = ReviewerBuilder.initialize()
-    dict_response, json_response = get_api_response(CONFIG['REVIEWER_INFO_ENDPOINT'], 'USERID', reviewer_id)
+    dict_response, json_response = get_api_response(
+        CONFIG['REVIEWER_INFO_ENDPOINT'], 'USERID', reviewer_id)
 
     reviewer_name = dict_response['GoodreadsResponse']['user']['name']
     reviewer = reviewer.hasName(reviewer_name).hasID(reviewer_id)
@@ -202,7 +216,8 @@ def reviewer_provider(reviewer_id):
                     following.append(f['id'])
 
             following_end_count = dict_response['GoodreadsResponse']['following']['@end']
-            print(f"Pulled {following_end_count} out of {total_number_of_following} following")
+            print(
+                f"Pulled {following_end_count} out of {total_number_of_following} following")
             if following_end_count == total_number_of_following:
                 break
 
@@ -212,9 +227,7 @@ def reviewer_provider(reviewer_id):
         page = 0
         while True:
             page += 1
-            dict_response, json_response = get_auth_api_response(CONFIG['FOLLOWERS_INFO_ENDPOINT'], 'USERID',
-                                                                 reviewer_id,
-                                                                 page)
+            dict_response, json_response = get_auth_api_response(CONFIG['FOLLOWERS_INFO_ENDPOINT'], 'USERID', reviewer_id, page)
             total_number_of_followers = dict_response['GoodreadsResponse']['followers']['@total']
 
             followers_ = dict_response['GoodreadsResponse']['followers']['user']
@@ -228,7 +241,8 @@ def reviewer_provider(reviewer_id):
                     followers.append(f['id'])
 
             followers_end_count = dict_response['GoodreadsResponse']['followers']['@end']
-            print(f"Pulled {followers_end_count} out of {total_number_of_followers} followers")
+            print(
+                f"Pulled {followers_end_count} out of {total_number_of_followers} followers")
             if followers_end_count == total_number_of_followers:
                 break
 
@@ -237,3 +251,95 @@ def reviewer_provider(reviewer_id):
     reviewer = reviewer.build()
 
     return reviewer
+
+
+# OK
+def write_book_object_to_file(file, book=None, mode="normal"):
+    CONFIG = config_reader()
+    extension = CONFIG['FILETYPE']
+
+    if extension == "json":
+        json_obj = json.dumps(book.__dict__)
+        json.dump(json_obj, file)
+    elif extension == "csv":
+        writer = csv.writer(file, delimiter=',', quotechar='"')
+        if mode == "init":
+            writer.writerow(
+                ["book_name", "id", "authors", "isbn", "isbn13", "publication_date", "best_book_id", "reviews_count", "ratings_sum", "ratings_count", "text_reviews_count", "average_ratings"])
+        else:
+            writer.writerow([
+                book.book_name,
+                book.id,
+                book.authors,
+                book.isbn,
+                book.isbn13,
+                book.publication_date,
+                book.best_book_id,
+                book.reviews_count,
+                book.ratings_sum,
+                book.ratings_count,
+                book.text_reviews_count,
+                book.average_ratings
+            ])
+
+        file.flush()
+
+# OK
+def write_review_object_to_file(file, review=None, mode="normal"):
+    CONFIG = config_reader()
+    extension = CONFIG['FILETYPE']
+    
+    if extension == "json":
+        json_obj = json.dumps(review.__dict__)
+        json.dump(json_obj, file)
+    elif extension == "csv":
+        writer = csv.writer(file, delimiter=',', quotechar='"')
+        if mode == "init":
+            writer.writerow(
+                ["review_id", "reviewer_id", "rating", "likes", "review", "book_id"])
+        else:
+            writer.writerow([
+                review.review_id,
+                review.reviewer_id,
+                review.rating,
+                review.likes,
+                review.review,
+                review.book_id
+            ])
+
+    file.flush()
+
+# OK
+def write_reviewer_object_to_file(file, reviewer=None, mode="normal"):
+    CONFIG = config_reader()
+    extension = CONFIG['FILETYPE']
+    
+    if extension == "json":
+        json_obj = json.dumps(reviewer.__dict__)
+        json.dump(json_obj, file)
+    elif extension == "csv":
+        writer = csv.writer(file, delimiter=',', quotechar='"')
+        if mode == "init":
+            writer.writerow(
+                ["reviewer_name", "reviewer_id", "shelves", "number_of_reviews", "friends_count", "following", "followers"])
+        else:
+            shelves = []
+            for shelf in reviewer.shelves:
+                s = []
+                s.append(shelf.get_shelf_id())
+                s.append(shelf.get_shelf_name())
+                s.append(shelf.get_book_count())
+                shelves.append(s)
+            writer.writerow([
+                reviewer.reviewer_name,
+                reviewer.reviewer_id,
+                shelves,
+                reviewer.number_of_reviews,
+                reviewer.friends_count,
+                reviewer.following,  
+                reviewer.followers  
+
+            ])
+
+        file.flush()
+

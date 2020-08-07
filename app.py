@@ -1,8 +1,7 @@
 """For running this script, please ensure that `sample` directory has `resources` directory container chromedriver
 for your OS executable file, clone this repository for better usage.
 """
-
-from object_provider import book_provider, reviews_provider
+from associate_runner import book_provider, reviews_provider, write_book_object_to_file, write_review_object_to_file, write_reviewer_object_to_file
 
 try:
     import json
@@ -12,11 +11,13 @@ try:
     import urllib
     import os
     import platform
+    import traceback
     import time
     from backports import configparser
     from bs4 import BeautifulSoup
     from collections import defaultdict
-    from support.helper import config_reader, make_html_soup, oauth_validator, clean_up, get_auth_api_response
+    from support.helper import config_reader, make_html_soup, oauth_validator, clean_up, get_auth_api_response, \
+        file_creator
     from selenium import webdriver
     from selenium.webdriver.common.by import By
     from selenium.webdriver.common.keys import Keys
@@ -39,11 +40,14 @@ driver = webdriver.Chrome(options=chrome_options, executable_path=chrome_driver_
                           service_log_path="./chromedriver.log")
 driver.delete_all_cookies()
 
-
-# initializing a Pretty Printer
-pp = pprint.PrettyPrinter(indent=2)
-
-
+extension = CONFIG['FILETYPE']
+filenames = ['book', 'review', 'reviewer']
+for idx, filename in enumerate(filenames):
+    filenames[idx] = filenames[idx] + '.csv'
+book_file, review_file, reviewer_file = file_creator(filenames)
+write_book_object_to_file(book_file, None, mode="init")
+write_review_object_to_file(review_file, None, mode="init")
+write_reviewer_object_to_file(reviewer_file, None, mode="init")
 
 def element_grabber(param, by_type="xpath"):
     global driver
@@ -89,7 +93,7 @@ def link_navigator():
         for child_url in CONFIG['CHILD_URLS']:
             page = 0
             while True:
-                page+=1
+                page += 1
                 child_url = child_url + f"?page={page}"
                 print(f"Getting Child URL 🌍: {child_url}", end="\n\n")
                 driver.get(child_url)
@@ -122,24 +126,23 @@ def link_navigator():
                     print(f"Accessing {title} by {author} with ID:{ID} ...")
 
                     # pulling book info from bookreads api
-                    book, reviews_url = book_provider(book_id=ID)
+                    book, reviews_url = book_provider(ID, book_file)
 
                     if reviews_url.find("isbn") == -1:
                         reviews_url += f"&isbn={book.get_isbn()}"
 
                     reviews_url = reviews_url.replace("DEVELOPER_ID", CONFIG['CLIENT_KEY'])
 
-                    reviews_provider(reviews_url, driver, book.get_id())
+                    reviews_provider(reviews_url, driver, book.get_id(), review_file, reviewer_file)
+
                     # break
                 # break
             # break
 
 
 
-                    # store book, review, reviewer
-
     except Exception as exception:
-        print(exception)
+        traceback.print_exc()
     finally:
         driver.quit()
 
@@ -151,12 +154,10 @@ if __name__ == "__main__":
         _ = os.system('cls')
     oauth_validator()
     link_navigator()
-
-    # reviews_provider(url, driver, "2429135")
-    clean_up()
+    # book_provider("2429135",book_file)
+    clean_up([book_file, review_file, reviewer_file])
     input("\n\n\nPress enter to exit 🚀...")
 
     # clearing screen
     if os.name == "nt":
         _ = os.system('cls')
-

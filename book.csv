@@ -1,0 +1,2 @@
+book_name,id,authors,isbn,isbn13,publication_date,best_book_id,reviews_count,ratings_sum,ratings_count,text_reviews_count,average_ratings
+The Girl with the Dragon Tattoo,2429135,"['Stieg Larsson', 'Reg Keeland']",0307269752,9780307269751,16-9-2008,2429135,3679747,10601267,2562931,68258,4.14
