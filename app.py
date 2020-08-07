@@ -44,6 +44,7 @@ driver.delete_all_cookies()
 pp = pprint.PrettyPrinter(indent=2)
 
 
+
 def element_grabber(param, by_type="xpath"):
     global driver
     element = None
@@ -86,49 +87,53 @@ def link_navigator():
         sign_btn.click()
 
         for child_url in CONFIG['CHILD_URLS']:
-            print(f"Getting Child URL 🌍: {child_url}", end="\n\n")
-            driver.get(child_url)
-            html = driver.page_source
-            soup = make_html_soup(html)
+            page = 0
+            while True:
+                page+=1
+                child_url = child_url + f"?page={page}"
+                print(f"Getting Child URL 🌍: {child_url}", end="\n\n")
+                driver.get(child_url)
+                html = driver.page_source
+                soup = make_html_soup(html)
 
-            # Find number of books provided by the link
-            t = soup.find('div', attrs={'class': 'stacked'})
-            number_of_books = t.find('div').get_text().strip().split(" books")[0]
+                # Find number of books provided by the link
+                t = soup.find('div', attrs={'class': 'stacked'})
+                total_number_of_books = t.find('div').get_text().strip().split(" books")[0]
 
-            print(f"# books found = {number_of_books}", end="\n\n")
+                print(f"# books found = {total_number_of_books}", end="\n\n")
 
-            # find all the books in one page
-            table_rows = soup.find_all('tr')
+                # find all the books in one page
+                table_rows = soup.find_all('tr')
+                if len(table_rows) == 0:
+                    break
+                for table_row in table_rows:
 
-            for table_row in table_rows:
-                a_tag = table_row.find('a', attrs={'class': 'bookTitle'})
-                ID = re.findall(r'(\d{1,11})', a_tag['href'])[0]
-                print(f"Redirecting URL : {CONFIG['ROOT_URL'][:len(CONFIG['ROOT_URL']) - 1] + a_tag['href']}")
-                span = a_tag.find('span')
+                    a_tag = table_row.find('a', attrs={'class': 'bookTitle'})
+                    ID = re.findall(r'(\d{1,11})', a_tag['href'])[0]
+                    print(f"Redirecting URL : {CONFIG['ROOT_URL'][:len(CONFIG['ROOT_URL']) - 1] + a_tag['href']}")
+                    span = a_tag.find('span')
 
-                title = span.get_text().split('(')[0].strip()
+                    title = span.get_text().split('(')[0].strip()
 
-                a_tag = table_row.find('a', attrs={'class': 'authorName'})
-                span = a_tag.find('span', attrs={'itemprop': 'name'})
-                author = span.get_text()
+                    a_tag = table_row.find('a', attrs={'class': 'authorName'})
+                    span = a_tag.find('span', attrs={'itemprop': 'name'})
+                    author = span.get_text()
 
-                print(f"Accessing {title} by {author} with ID:{ID} ...")
+                    print(f"Accessing {title} by {author} with ID:{ID} ...")
 
-                # pulling book info from bookreads api
-                book, reviews_url = book_provider(book_id=ID)
+                    # pulling book info from bookreads api
+                    book, reviews_url = book_provider(book_id=ID)
 
-                # book.Wingardium_Leviosa()
+                    # book.Wingardium_Leviosa()
 
-                if reviews_url.find("isbn") == -1:
-                    reviews_url += f"&isbn={book.get_isbn()}"
+                    if reviews_url.find("isbn") == -1:
+                        reviews_url += f"&isbn={book.get_isbn()}"
 
-                reviews_url = reviews_url.replace("DEVELOPER_ID", CONFIG['CLIENT_KEY'])
+                    reviews_url = reviews_url.replace("DEVELOPER_ID", CONFIG['CLIENT_KEY'])
 
-                review, reviewer = reviews_provider(reviews_url, book.get_id())
+                    review, reviewer = reviews_provider(reviews_url, book.get_id())
 
-            #     store these...
-
-            break
+                    # store book, review, reviewer
 
     except Exception as exception:
         print(exception)
