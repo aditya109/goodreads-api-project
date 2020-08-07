@@ -101,8 +101,11 @@ def reviews_provider(reviews_url, book_id):
         print(f"Driver Getting URL 🌍 : {reviews_url}")
         response = requests.get(reviews_url)
         html = response.content
-
         soup = make_html_soup(html)
+
+        if soup.find('div', attrs={'class':'gr_reviews_showing'}).get_text().strip().find("No reviews found"):
+            break
+
         reviews_links_in_a_page = soup.find_all('a', attrs={'class': 'gr_more_link'})
         for review_link in reviews_links_in_a_page:
             review = ReviewBuilder.initialize()
@@ -133,9 +136,9 @@ def reviews_provider(reviews_url, book_id):
             review = review.build()
 
             print("=======================================================================")
-            review.Wingardium_Leviosa()
+            # review.Wingardium_Leviosa()
             reviewer = reviewer_provider(reviewer_id)
-            reviewer.Wingardium_Leviosa()
+            # reviewer.Wingardium_Leviosa()
 
 
 def reviewer_provider(reviewer_id):

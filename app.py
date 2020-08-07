@@ -124,8 +124,10 @@ def link_navigator():
 
                 reviews_url = reviews_url.replace("DEVELOPER_ID", CONFIG['CLIENT_KEY'])
 
-                reviews_provider(reviews_url, book.get_id())
-                break
+                review, reviewer = reviews_provider(reviews_url, book.get_id())
+
+            #     store these...
+
             break
 
     except Exception as exception:
