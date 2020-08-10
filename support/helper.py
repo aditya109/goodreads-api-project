@@ -60,12 +60,6 @@ def config_reader():
     CONFIG['CLIENT_KEY'] = config['credentials']['client_key']  # string
     CONFIG['CLIENT_SECRET'] = config['credentials']['client_secret']  # string
 
-    CONFIG['EMAIL_ID'] = config['credentials']['email_id']  # string
-    CONFIG['PASSWORD'] = config['credentials']['password']  # string
-
-    CONFIG['CHROMEDRIVER'] = config['resources-path']['chromedriver']
-    CONFIG['GECKODRIVER'] = config['resources-path']['geckodriver']
-
     CONFIG['ROOT_URL'] = config['nav-links']['root_url']  # string
     CONFIG['CHILD_URLS'] = config['nav-links']['child_urls'].split(',')  # string
 
