@@ -1,15 +1,13 @@
-import os
-import traceback
-
-import requests
-from bs4 import BeautifulSoup
-from rauth import OAuth1Service, OAuth1Session
-
 try:
     import xmltodict
     import configparser
     import collections
     import json
+    import os
+    import traceback
+    import requests
+    from bs4 import BeautifulSoup
+    from rauth import OAuth1Service, OAuth1Session
 except Exception as e:
     print(e)
 
@@ -78,12 +76,10 @@ def make_html_soup(html):
     return BeautifulSoup(html, features='lxml')
 
 
-def get_api_response(url, field, value):
-    CONFIG = config_reader()
-    url = url.replace(field, value).replace('DEVELOPER_ID', CONFIG['CLIENT_KEY'])
-    # print(f"Request sent 📨 👉 URL : {url}")
+def get_api_response(url):
+    # requesting response from url
     response = requests.get(url)
-
+    # converting response_xml to dict
     return response_to_json_dict(response)
 
 
@@ -160,6 +156,7 @@ def clean_up(files):
 def file_creator(filenames):
     files = []
     for filename in filenames:
-        file = open(filename, "w", newline='')
+        file = open(filename, "w",  encoding="utf-8" ,newline='')
         files.append(file)
     return files
+

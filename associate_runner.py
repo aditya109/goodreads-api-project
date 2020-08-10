@@ -9,18 +9,15 @@ try:
     from domain.review import ReviewBuilder
     from domain.reviewer import ShelfBuilder, ReviewerBuilder
     import requests
-    from support.auxillary import config_reader, response_to_json_dict, make_html_soup, get_api_response, oauth_validator, \
+    from support.auxillary import config_reader, response_to_json_dict, make_html_soup, get_api_response, \
+        oauth_validator, \
         get_auth_api_response
 except Exception as e:
     print(e)
 
 
-def book_provider(book_id, file):
-    CONFIG = config_reader()
-
-    dict_response, json_response = get_api_response(
-        CONFIG['BOOK_INFO_ENDPOINT'], "BOOKID", book_id)
-
+def book_provider(dict_response, json_response):
+    flag = True
     # using Builder to initialize Book object
     book = BookBuilder.initialize()
 
@@ -33,8 +30,11 @@ def book_provider(book_id, file):
     authors = dict_response['GoodreadsResponse']['book']['authors']['author']
     authors_list = list()
 
-    for author in authors:
-        authors_list.append(author['name'])
+    if isinstance(authors, list):
+        for author in authors:
+            authors_list.append(author['name'])
+    elif isinstance(authors, dict):
+        authors_list.append(authors['name'])
 
     book = book.hasAuthors(authors_list)
 
@@ -44,59 +44,68 @@ def book_provider(book_id, file):
 
     # adding ISBN
     isbn = dict_response['GoodreadsResponse']['book']['isbn']
-    if isbn == "":
-        print("No ISBN.. Using regex to explicit scrapping...")
+    if isbn is None:
+        isbn = re.findall(r'ISBN (\d{10})', json_response)
+        if len(isbn) == 0:
+            flag = False
+        else:
+            book = book.hasISBN(isbn[0])
     else:
-        isbn = re.findall(r'ISBN (\d{10})', json_response)[0]
-    book = book.hasISBN(isbn)
+        book = book.hasISBN(isbn)
 
-    # adding ISBN13
-    isbn13 = dict_response['GoodreadsResponse']['book']['isbn13']
-    if isbn13 == "":
-        print("No ISBN.. Using regex to explicit scrapping...")
+    if flag:
+        # adding ISBN13
+        isbn13 = dict_response['GoodreadsResponse']['book']['isbn13']
+        if isbn13 is None:
+            isbn13 = re.findall(r'ISBN13: (\d{13})', json_response)
+            if len(isbn13) == 0:
+                print("ISBN13 Not Found !\n")
+            else:
+                book = book.hasISBN13(isbn13[0])
+        else:
+            book = book.hasISBN13(isbn13)
+
+        # adding Publication Date
+        publication_date = f"{dict_response['GoodreadsResponse']['book']['publication_day']}-{dict_response['GoodreadsResponse']['book']['publication_month']}-{dict_response['GoodreadsResponse']['book']['publication_year']}"
+        book = book.wasPublishedOn(publication_date)
+
+        # adding Best Book ID
+        best_book_id = dict_response['GoodreadsResponse']['book']['work']['best_book_id']['#text']
+        book = book.hasBestBookId(best_book_id)
+
+        # adding Reviews Count
+        reviews_count = dict_response['GoodreadsResponse']['book']['work']['reviews_count']['#text']
+        book = book.hasReviewsCount(reviews_count)
+
+        # adding Ratings Sum
+        ratings_sum = dict_response['GoodreadsResponse']['book']['work']['ratings_sum']['#text']
+        book = book.hasRatingsSum(ratings_sum)
+
+        # adding Ratings Count
+        ratings_count = dict_response['GoodreadsResponse']['book']['work']['ratings_count']['#text']
+        book = book.hasRatingsCount(ratings_count)
+
+        # adding Text Ratings Count
+        text_reviews_count = dict_response['GoodreadsResponse']['book']['work']['text_reviews_count']['#text']
+        book = book.hasTextReviewsCount(text_reviews_count)
+
+        # adding Avg Rating
+        avg_rating = dict_response['GoodreadsResponse']['book']['average_rating']
+        book = book.hasAverageRatings(avg_rating)
+
+        # extracting reviews url from iframe
+        reviews_widget = dict_response['GoodreadsResponse']['book']['reviews_widget']
+        review_widgets_json = json.loads(json.dumps(reviews_widget))
+
+        soup = BeautifulSoup(review_widgets_json, features="html.parser")
+        review_url = soup.find('iframe').get('src')
+
+        book = book.build()
+
+
+        return book, review_url
     else:
-        isbn13 = re.findall(r'ISBN13: (\d{13})', json_response)[0]
-    book = book.hasISBN13(isbn13)
-
-    # adding Publication Date
-    publication_date = f"{dict_response['GoodreadsResponse']['book']['publication_day']}-{dict_response['GoodreadsResponse']['book']['publication_month']}-{dict_response['GoodreadsResponse']['book']['publication_year']}"
-    book = book.wasPublishedOn(publication_date)
-
-    # adding Best Book ID
-    best_book_id = dict_response['GoodreadsResponse']['book']['work']['best_book_id']['#text']
-    book = book.hasBestBookId(best_book_id)
-
-    # adding Reviews Count
-    reviews_count = dict_response['GoodreadsResponse']['book']['work']['reviews_count']['#text']
-    book = book.hasReviewsCount(reviews_count)
-
-    # adding Ratings Sum
-    ratings_sum = dict_response['GoodreadsResponse']['book']['work']['ratings_sum']['#text']
-    book = book.hasRatingsSum(ratings_sum)
-
-    # adding Ratings Count
-    ratings_count = dict_response['GoodreadsResponse']['book']['work']['ratings_count']['#text']
-    book = book.hasRatingsCount(ratings_count)
-
-    # adding Text Ratings Count
-    text_reviews_count = dict_response['GoodreadsResponse']['book']['work']['text_reviews_count']['#text']
-    book = book.hasTextReviewsCount(text_reviews_count)
-
-    # adding Avg Rating
-    avg_rating = dict_response['GoodreadsResponse']['book']['average_rating']
-    book = book.hasAverageRatings(avg_rating)
-
-    # extracting reviews url from iframe
-    reviews_widget = dict_response['GoodreadsResponse']['book']['reviews_widget']
-    review_widgets_json = json.loads(json.dumps(reviews_widget))
-
-    soup = BeautifulSoup(review_widgets_json, features="html.parser")
-    reviews_url = soup.find('iframe').get('src')
-
-    book = book.build()
-
-    write_book_object_to_file(file, book, "normal")
-    return book, reviews_url
+        return None, None
 
 
 def reviews_provider(reviews_url, driver, book_id, review_file, reviewer_file):
@@ -145,8 +154,6 @@ def reviews_provider(reviews_url, driver, book_id, review_file, reviewer_file):
             review = review.hasBookId(book_id)
             review = review.build()
 
-            print(
-                "=========================================================================================")
             reviewer = reviewer_provider(reviewer_id)
 
             # Attempting write on reviewer
@@ -225,7 +232,8 @@ def reviewer_provider(reviewer_id):
         page = 0
         while True:
             page += 1
-            dict_response, json_response = get_auth_api_response(CONFIG['FOLLOWERS_INFO_ENDPOINT'], 'USERID', reviewer_id, page)
+            dict_response, json_response = get_auth_api_response(CONFIG['FOLLOWERS_INFO_ENDPOINT'], 'USERID',
+                                                                 reviewer_id, page)
             total_number_of_followers = dict_response['GoodreadsResponse']['followers']['@total']
 
             followers_ = dict_response['GoodreadsResponse']['followers']['user']
@@ -263,7 +271,8 @@ def write_book_object_to_file(file, book=None, mode="normal"):
         writer = csv.writer(file, delimiter=',', quotechar='"')
         if mode == "init":
             writer.writerow(
-                ["book_name", "id", "authors", "isbn", "isbn13", "publication_date", "best_book_id", "reviews_count", "ratings_sum", "ratings_count", "text_reviews_count", "average_ratings"])
+                ["book_name", "id", "authors", "isbn", "isbn13", "publication_date", "best_book_id", "reviews_count",
+                 "ratings_sum", "ratings_count", "text_reviews_count", "average_ratings"])
         else:
             writer.writerow([
                 book.book_name,
@@ -282,11 +291,12 @@ def write_book_object_to_file(file, book=None, mode="normal"):
 
         file.flush()
 
+
 # OK
 def write_review_object_to_file(file, review=None, mode="normal"):
     CONFIG = config_reader()
     extension = CONFIG['FILETYPE']
-    
+
     if extension == "json":
         json_obj = json.dumps(review.__dict__)
         json.dump(json_obj, file)
@@ -307,11 +317,12 @@ def write_review_object_to_file(file, review=None, mode="normal"):
 
     file.flush()
 
+
 # OK
 def write_reviewer_object_to_file(file, reviewer=None, mode="normal"):
     CONFIG = config_reader()
     extension = CONFIG['FILETYPE']
-    
+
     if extension == "json":
         json_obj = json.dumps(reviewer.__dict__)
         json.dump(json_obj, file)
@@ -319,7 +330,8 @@ def write_reviewer_object_to_file(file, reviewer=None, mode="normal"):
         writer = csv.writer(file, delimiter=',', quotechar='"')
         if mode == "init":
             writer.writerow(
-                ["reviewer_name", "reviewer_id", "shelves", "number_of_reviews", "friends_count", "following", "followers"])
+                ["reviewer_name", "reviewer_id", "shelves", "number_of_reviews", "friends_count", "following",
+                 "followers"])
         else:
             shelves = []
             for shelf in reviewer.shelves:
@@ -334,10 +346,9 @@ def write_reviewer_object_to_file(file, reviewer=None, mode="normal"):
                 shelves,
                 reviewer.number_of_reviews,
                 reviewer.friends_count,
-                reviewer.following,  
-                reviewer.followers  
+                reviewer.following,
+                reviewer.followers
 
             ])
 
         file.flush()
-
