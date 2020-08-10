@@ -1,4 +1,4 @@
 try:
-    import support.helper
+    import support.auxillary
 except Exception as e:
     print(e)

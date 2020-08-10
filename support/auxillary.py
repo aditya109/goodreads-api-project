@@ -52,10 +52,10 @@ def config_reader():
     CONFIG = dict()
 
     # for Aditya
-    # config.read("D:/Projects/config/config2.ini")
+    config.read("D:/Projects/config/config2.ini")
 
     # for Manel
-    config.read("./config.ini")
+    # config.read("./config.ini")
 
     CONFIG['CLIENT_KEY'] = config['credentials']['client_key']  # string
     CONFIG['CLIENT_SECRET'] = config['credentials']['client_secret']  # string
@@ -150,11 +150,11 @@ def clean_up(files):
         os.remove("auth.ini")
         for file in files:
             file.close()
+    except FileNotFoundError as e:
+        print("File Not Found : auth.ini")
     except Exception as E:
         print("Error in removing auth.ini. Kindly remove it manually !")
         traceback.print_exc()
-
-
 
 
 def file_creator(filenames):

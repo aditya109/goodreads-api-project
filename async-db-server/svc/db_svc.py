@@ -3,7 +3,7 @@ import random
 
 from psycopg2 import errors
 
-from support.helper import config_reader
+from support.auxillary import config_reader
 
 try:
     import psycopg2

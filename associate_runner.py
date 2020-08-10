@@ -9,7 +9,7 @@ try:
     from domain.review import ReviewBuilder
     from domain.reviewer import ShelfBuilder, ReviewerBuilder
     import requests
-    from support.helper import config_reader, response_to_json_dict, make_html_soup, get_api_response, oauth_validator, \
+    from support.auxillary import config_reader, response_to_json_dict, make_html_soup, get_api_response, oauth_validator, \
         get_auth_api_response
 except Exception as e:
     print(e)
