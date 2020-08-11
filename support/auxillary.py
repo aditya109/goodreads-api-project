@@ -160,3 +160,8 @@ def file_creator(filenames):
         files.append(file)
     return files
 
+def get_page_content_response(url):
+    # requesting response from url
+    response = requests.get(url)
+    # converting response_xml to dict
+    return make_html_soup(response.content.decode('utf-8', 'ignore'))

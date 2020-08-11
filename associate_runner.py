@@ -102,7 +102,6 @@ def book_provider(dict_response, json_response):
 
         book = book.build()
 
-
         return book, review_url
     else:
         return None, None
