@@ -95,7 +95,6 @@ def get_reviewers_links(review_content_result):
         CONFIG['REVIEWER_INFO_ENDPOINT'].replace('USERID', reviewer_id).replace('DEVELOPER_ID', CONFIG['CLIENT_KEY']))
     return reviewer_urls
 
-
 def get_href_links_from_reviews(link) -> List:
     html = get_page_content_response(link)
     a_tags_in_a_page = html.find_all('a', attrs={'class': 'gr_more_link'})
@@ -184,15 +183,23 @@ def link_navigator():
                     review_content_results = perform_parallel_tasks(get_page_content_response,
                                                                     specific_review_links_list)
                     # accumulating all the reviewer links from accumalated html contents
-                    reviewer_results = [reviewer_result.result() for reviewer_result in
-                                        perform_parallel_tasks(get_reviewers_links, review_content_results)]
+                    reviewer_results = [reviewer_result.result() for reviewer_result in perform_parallel_tasks(get_reviewers_links, review_content_results)]
                     # storing all the reviewer urls
-                    temp.append(reviewer_results)
+                    cumulative_reviewer_urls.append(reviewer_results)
+                    print(f"🔊 Pulled {len(cumulative_reviewer_urls[row-1])} reviews of book {row} ==> {round(time.perf_counter() - start_time, 3)} secs...")
 
-                    cumulative_reviewer_urls.append(temp)
-                    print(
-                        f"🔊 Pulled {len(cumulative_reviewer_urls[row - 1])} reviews of book {row} ==> {round(time.perf_counter() - start_time, 3)} secs...")
-                    break
+                # ====================#################==============================
+                # pulling reviewers info from bookreads api
+
+
+
+
+
+
+
+
+
+
 
                 # ====================#################==============================
                 # pulling REVIEWERS INFO from bookreads api
@@ -217,7 +224,3 @@ if __name__ == "__main__":
     # cleaning up project, closing files, etc
     clean_up([book_file, review_file, reviewer_file])
     input("\n\n\nPress enter to exit 🚀...")
-
-    # clearing screen
-    if os.name == "nt":
-        _ = os.system('cls')
