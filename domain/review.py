@@ -44,7 +44,8 @@ class Review:
         self.book_id = value
 
     def Wingardium_Leviosa(self):
-        print(f"Review ID : {self.review_id}\n"
+        print(f"==========================================================\n"
+              f"Review ID : {self.review_id}\n"
               f"Reviewer ID : {self.reviewer_id}\n"
               f"Rating : {self.rating}\n"
               f"Likes : {self.likes}\n"

@@ -107,60 +107,40 @@ def book_provider(dict_response, json_response):
         return None, None
 
 
-def reviews_provider(reviews_url, driver, book_id, review_file, reviewer_file):
-    page = 0
-    while True:
-        page += 1
-        reviews_url = reviews_url + f'&page={page}'
-        print(f"Driver Getting URL 🌍 : {reviews_url}")
-        response = requests.get(reviews_url)
-        html = response.content
-        soup = make_html_soup(html)
+def reviews_provider(soup):
+    # initializing a `ReviewBuilder` object
+    review = ReviewBuilder.initialize()
 
-        reviews_links_in_a_page = soup.find_all(
-            'a', attrs={'class': 'gr_more_link'})
-        if len(reviews_links_in_a_page) == 0:
-            break
+    # scraping page URL off the review page
+    page_url = soup.find('link').get('href')
+    # using REGEX expression to extract review_id
+    review_id = re.findall(r'(\d{1,13})', page_url)[0]
+    # adding review_id to `review` object
+    review = review.hasReviewID(review_id)
 
-        for review_link in reviews_links_in_a_page:
-            review = ReviewBuilder.initialize()
-            review_url = review_link.get('href')
-            driver.get(review_url)
-            html = driver.page_source
-            soup = make_html_soup(html)
-            review_id = re.findall(r'(\d{1,13})', review_url)[0]
-            review = review.hasReviewID(review_id)
+    reviewer_page = soup.find('h1').find('a').get('href')
+    reviewer_id = re.findall(r'(\d{1,13})', reviewer_page)[0]
+    review = review.byReviewerID(reviewer_id)
 
-            reviewer_page = soup.find('h1').find('a').get('href')
-            print(
-                f"Reviewer's Home Page Link : {'https://www.goodreads.com' + reviewer_page}")
+    rating = soup.find(
+        'meta', attrs={'itemprop': 'ratingValue'}).get('content')
+    review = review.hasRating(rating)
 
-            reviewer_id = re.findall(r'(\d{1,13})', reviewer_page)[0]
-            review = review.byReviewerID(reviewer_id)
+    review_text = soup.find(
+        'div', attrs={'itemprop': 'reviewBody'}).get_text().strip()
+    review = review.hasText(review_text)
 
-            rating = soup.find(
-                'meta', attrs={'itemprop': 'ratingValue'}).get('content')
-            review = review.hasRating(rating)
+    likes = soup.find('span', attrs={'class': 'likesCount'})
+    if likes is not None:
+        likes = likes.get_text().split(' likes')[0].strip()
+        review = review.hasLikes(likes)
 
-            review_text = soup.find(
-                'div', attrs={'itemprop': 'reviewBody'}).get_text().strip()
-            review = review.hasText(review_text)
+    book_url = soup.find('a', attrs={'class':'bookTitle', 'itemprop':'url'}).get('href')
+    book_id = re.findall(r'(\d{1,13})', book_url)[0]
+    review = review.hasBookId(book_id=book_id)
+    review = review.build()
 
-            likes = soup.find('span', attrs={'class': 'likesCount'}).get_text().split(
-                ' likes')[0].strip()
-            review = review.hasLikes(likes)
-
-            review = review.hasBookId(book_id)
-            review = review.build()
-
-            reviewer = reviewer_provider(reviewer_id)
-
-            # Attempting write on reviewer
-            # print("====> Attempting write on review")
-            write_review_object_to_file(review_file, review, "normal")
-            # print("====> Attempting write on reviewer")
-            write_reviewer_object_to_file(reviewer_file, reviewer, "normal")
-
+    return review
 
 def reviewer_provider(reviewer_id):
     CONFIG = config_reader()

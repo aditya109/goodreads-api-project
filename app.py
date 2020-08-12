@@ -44,6 +44,9 @@ write_book_object_to_file(book_file, None, mode="init")
 write_review_object_to_file(review_file, None, mode="init")
 write_reviewer_object_to_file(reviewer_file, None, mode="init")
 
+pp = pprint.PrettyPrinter(indent=4)
+
+
 def links_flattener(matrix):
     flattened_links = [list__.result() for list__
                        in matrix]
@@ -60,7 +63,7 @@ def perform_reviews_links_task(cumulative_reviews_url_for_one_book) -> List:
     return flattened_links
 
 
-def perform_parallel_tasks(function, items)-> List:
+def perform_parallel_tasks(function, items) -> List:
     results = []
     # using multithreading concept to fasten the web pull
     with ThreadPoolExecutor(50) as executor:
@@ -74,7 +77,7 @@ def perform_parallel_tasks(function, items)-> List:
     return results
 
 
-def get_links(table_rows)->List:
+def get_links(table_rows) -> List:
     for table_row in table_rows:
         a_tag = table_row.find('a', attrs={'class': 'bookTitle'})
         book_id = re.findall(r'(\d{1,11})', a_tag['href'])[0]
@@ -83,7 +86,16 @@ def get_links(table_rows)->List:
         yield book_endpoint_url
 
 
-def get_href_links_from_reviews(link)->List:
+def get_reviewers_links(review_content_result):
+    reviewer_urls = []
+    review = reviews_provider(review_content_result.result())
+    write_review_object_to_file(file=review_file, review=review, mode="normal")
+    reviewer_id = review.get_reviewer_id()
+    reviewer_urls.append(
+        CONFIG['REVIEWER_INFO_ENDPOINT'].replace('USERID', reviewer_id).replace('DEVELOPER_ID', CONFIG['CLIENT_KEY']))
+    return reviewer_urls
+
+def get_href_links_from_reviews(link) -> List:
     html = get_page_content_response(link)
     a_tags_in_a_page = html.find_all('a', attrs={'class': 'gr_more_link'})
     href_links = [a_tag.get('href') for a_tag in a_tags_in_a_page]
@@ -91,10 +103,7 @@ def get_href_links_from_reviews(link)->List:
 
 
 def link_navigator():
-    if os.name == "nt" and os.name == "mac":
-        _ = os.system('clear')
-
-    print("Execution starts here 🔥 ..", end="\n\n")
+    print("Execution starts here 🔥 ...", end="\n\n")
     try:
         for child_url in CONFIG['CHILD_URLS']:
             page = 0
@@ -152,7 +161,7 @@ def link_navigator():
                         # writing the book object to the output file
                         write_book_object_to_file(book_file, book, "normal")
 
-                print(f"Successfully pulled {len(books_list)} out of {len(table_rows)} books' info..")
+                print(f"🧩 Successfully pulled {len(books_list)} out of {len(table_rows)} books' info..")
 
                 # ====================#################==============================
                 # pulling reviews info from bookreads api
@@ -162,14 +171,37 @@ def link_navigator():
                     [cumulative_reviews_url_for_one_book + f"&page={page}" for page in range(1, 11)] for
                     cumulative_reviews_url_for_one_book in cumulative_reviews_urls_for_all_books]
 
-                 # iterating through all reviews urls for all books
+                # `cumulative_reviewer_urls` to store all the reviewer API hitpoints
+                cumulative_reviewer_urls = []
+                row = 0
+                # iterating through all the `cumulative_reviews_urls_for_all_books`
+                for cumulative_reviews_url_for_one_book in cumulative_reviews_urls_for_all_books:
+                    start_time = time.perf_counter()
+                    row += 1
+                    print(f"🛒 Starting reviews pull of book {row}...")
+                    # grabbing all the review links across all the pages of a book
+                    specific_review_links_list = perform_reviews_links_task(cumulative_reviews_url_for_one_book)
+                    # accumulating html contents of all the review links
+                    review_content_results = perform_parallel_tasks(get_page_content_response,
+                                                                    specific_review_links_list)
+                    # accumulating all the reviewer links from accumalated html contents
+                    reviewer_results = [reviewer_result.result() for reviewer_result in perform_parallel_tasks(get_reviewers_links, review_content_results)]
+                    # storing all the reviewer urls
+                    cumulative_reviewer_urls.append(reviewer_results)
+                    print(f"🔊 Pulled {len(cumulative_reviewer_urls[row-1])} reviews of book {row} ==> {round(time.perf_counter() - start_time, 3)} secs...")
 
-                specific_review_links_results = perform_parallel_tasks(perform_reviews_links_task, cumulative_reviews_urls_for_all_books)
+                # ====================#################==============================
+                # pulling reviewers info from bookreads api
 
-                for specific_review_links_result in specific_review_links_results:
-                    for link in specific_review_links_result.result():
-                        print(link)
-                    break
+
+
+
+
+
+
+
+
+
 
                 break
             break
@@ -182,9 +214,7 @@ def link_navigator():
 
 # START HERE
 if __name__ == "__main__":
-    # clearing screen
-    if os.name == "nt":
-        _ = os.system('cls')
+
     # Registering the app.py with OAuth
     # oauth_validator()
     link_navigator()
