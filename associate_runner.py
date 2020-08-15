@@ -1,20 +1,23 @@
+
 try:
     import json
     import csv
     import re
+    import pprint
 
     from bs4 import BeautifulSoup
-
     from domain.book import BookBuilder
     from domain.review import ReviewBuilder
     from domain.reviewer import ShelfBuilder, ReviewerBuilder
     import requests
     from support.auxillary import config_reader, response_to_json_dict, make_html_soup, get_api_response, \
-        oauth_validator, \
-        get_auth_api_response
+    oauth_validator, \
+    get_auth_api_response, perform_parallel_tasks
 except Exception as e:
     print(e)
 
+
+pp = pprint.PrettyPrinter(indent=2)
 
 def book_provider(dict_response, json_response):
     flag = True
@@ -142,16 +145,17 @@ def reviews_provider(soup):
 
     return review
 
-def reviewer_provider(reviewer_id):
+def reviewer_provider(dict_response, json_response):
     CONFIG = config_reader()
     reviewer = ReviewerBuilder.initialize()
-    dict_response, json_response = get_api_response(
-        CONFIG['REVIEWER_INFO_ENDPOINT'], 'USERID', reviewer_id)
 
+    reviewer_id = dict_response['GoodreadsResponse']['user']['id']
+    reviewer = reviewer.hasID(reviewer_id)
     reviewer_name = dict_response['GoodreadsResponse']['user']['name']
-    reviewer = reviewer.hasName(reviewer_name).hasID(reviewer_id)
+    reviewer = reviewer.hasName(reviewer_name)
 
     if 'private' not in dict_response['GoodreadsResponse']['user']:
+        print("Hello ==>")
         shelves = []
         temp_shelves = dict_response['GoodreadsResponse']['user']['user_shelves']['user_shelf']
 
@@ -179,63 +183,85 @@ def reviewer_provider(reviewer_id):
         friends_count = dict_response['GoodreadsResponse']['user']['friends_count']['#text']
         reviewer = reviewer.hasFriendsCount(friends_count)
 
+        dict_response, json_response = get_auth_api_response(CONFIG['FOLLOWING_INFO_ENDPOINT'], 'USERID',
+                                                             reviewer_id)
         following = []
-        page = 0
-        while True:
-            page += 1
-            dict_response, json_response = get_auth_api_response(CONFIG['FOLLOWING_INFO_ENDPOINT'], 'USERID',
-                                                                 reviewer_id,
-                                                                 page)
-            total_number_of_following = dict_response['GoodreadsResponse']['following']['@total']
+        pages = -1
+        total_number_of_following = dict_response['GoodreadsResponse']['following']['@total']
+        following_ = dict_response['GoodreadsResponse']['following']['user']
+        if total_number_of_following == "1":
+            following.append(following_['id'])
+        elif total_number_of_following == "0":
+            pass
+        else:
+            for f in following_:
+                following.append(f['id'])
+        if int(total_number_of_following) > 30:
+            if int(total_number_of_following) % 30 == 0:
+                pages = int(total_number_of_following)//30
+            else: pages = int(total_number_of_following)//30 + 1
+        print(pages)
+        pp.pprint(following)
+        if pages > 1:
+            pages = [[CONFIG['FOLLOWING_INFO_ENDPOINT'], 'USERID', reviewer_id, i] for i in range(2, pages+1)]
 
-            following_ = dict_response['GoodreadsResponse']['following']['user']
+            follower_hit_results = perform_parallel_tasks(get_auth_api_response, pages)
+            print(follower_hit_results[0])
 
-            if total_number_of_following == "1":
-                following.append(following_['id'])
-            elif total_number_of_following == "0":
-                following = []
-            else:
 
-                for f in following_:
-                    following.append(f['id'])
 
-            following_end_count = dict_response['GoodreadsResponse']['following']['@end']
-            print(
-                f"Pulled {following_end_count} out of {total_number_of_following} following")
-            if following_end_count == total_number_of_following:
-                break
 
-        reviewer = reviewer.hasFollowing(following)
 
-        followers = []
-        page = 0
-        while True:
-            page += 1
-            dict_response, json_response = get_auth_api_response(CONFIG['FOLLOWERS_INFO_ENDPOINT'], 'USERID',
-                                                                 reviewer_id, page)
-            total_number_of_followers = dict_response['GoodreadsResponse']['followers']['@total']
 
-            followers_ = dict_response['GoodreadsResponse']['followers']['user']
 
-            if total_number_of_followers == "1":
-                followers.append(followers_['id'])
-            elif total_number_of_followers == "0":
-                followers = []
-            else:
-                for f in followers_:
-                    followers.append(f['id'])
+        # following = []
+        # page = 0
+        # while True:
+        #     page += 1
 
-            followers_end_count = dict_response['GoodreadsResponse']['followers']['@end']
-            print(
-                f"Pulled {followers_end_count} out of {total_number_of_followers} followers")
-            if followers_end_count == total_number_of_followers:
-                break
+        #
+        #
+        #
+        #     following_end_count = dict_response['GoodreadsResponse']['following']['@end']
+        #     print(
+        #         f"Pulled {following_end_count} out of {total_number_of_following} following")
+        #     break
 
-        reviewer = reviewer.hasFollowers(followers)
+        # reviewer = reviewer.hasFollowing(following)
 
-    reviewer = reviewer.build()
+        # dict_response, json_response = get_auth_api_response(CONFIG['FOLLOWERS_INFO_ENDPOINT'], 'USERID',
+        #                                                      reviewer_id, page)
+        #
+        # total_number_of_followers = dict_response['GoodreadsResponse']['followers']['@total']
+        # followers_ = dict_response['GoodreadsResponse']['followers']['user']
+        # followers_end_count = dict_response['GoodreadsResponse']['followers']['@end']
 
-    return reviewer
+        # followers = []
+        # page = 0
+        # while True:
+        #     page += 1
+        #     dict_response, json_response = get_auth_api_response(CONFIG['FOLLOWERS_INFO_ENDPOINT'], 'USERID',
+        #                                                          reviewer_id, page)
+        #
+        #
+        #     if total_number_of_followers == "1":
+        #         followers.append(followers_['id'])
+        #     elif total_number_of_followers == "0":
+        #         followers = []
+        #     else:
+        #         for f in followers_:
+        #             followers.append(f['id'])
+        #
+        #     print(
+        #         f"Pulled {followers_end_count} out of {total_number_of_followers} followers")
+        #     if followers_end_count == total_number_of_followers:
+        #         break
+
+        # reviewer = reviewer.hasFollowers(followers)
+
+    # reviewer = reviewer.build()
+    # return reviewer
+    # return None
 
 
 # OK

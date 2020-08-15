@@ -1,13 +1,22 @@
 try:
-    import xmltodict
-    import configparser
-    import collections
-    import json
     import os
-    import traceback
+    import json
     import requests
+    import platform
+    import xmltodict
+    import traceback
+    import concurrent
+    import collections
+    import configparser
     from bs4 import BeautifulSoup
+    from typing import List
+    from selenium import webdriver
+    from selenium.webdriver.common.by import By
     from rauth import OAuth1Service, OAuth1Session
+    from selenium.webdriver.common.keys import Keys
+    from selenium.webdriver.chrome.options import Options
+    from selenium.webdriver.support.ui import WebDriverWait
+    from concurrent.futures.thread import ThreadPoolExecutor
 except Exception as e:
     print(e)
 
@@ -57,6 +66,8 @@ def config_reader():
 
     CONFIG['CLIENT_KEY'] = config['credentials']['client_key']  # string
     CONFIG['CLIENT_SECRET'] = config['credentials']['client_secret']  # string
+    CONFIG['EMAIL_ID'] = config['credentials']['email']
+    CONFIG['PASSWORD'] = config['credentials']['password']
 
     CONFIG['ROOT_URL'] = config['nav-links']['root_url']  # string
     CONFIG['CHILD_URLS'] = config['nav-links']['child_urls'].split(',')  # string
@@ -83,12 +94,12 @@ def get_api_response(url):
     return response_to_json_dict(response)
 
 
-def get_auth_api_response(url, field, value, page):
+def get_auth_api_response(url, field, value, page=1):
     key, secret, access_token, access_token_secret = config_reader()['CLIENT_KEY'], config_reader()['CLIENT_SECRET'], \
                                                      auth_config_reader()['ACCESS_TOKEN'], auth_config_reader()[
                                                          'ACCESS_TOKEN_SECRET']
     url = url.replace(field, value)
-    # print(f"Request sent 📨 👉 URL : {url}")
+    print(url)
     new_session = OAuth1Session(
         consumer_key=key,
         consumer_secret=secret,
@@ -99,6 +110,48 @@ def get_auth_api_response(url, field, value, page):
     response = new_session.get(url=url, params=params)
     return response_to_json_dict(response)
 
+def element_grabber(driver, param, by_type="xpath"):
+    #  Grabbing elements by either xpath or id using find_element() in driver for our Selenium
+    element = None
+    if by_type == "xpath":
+        element = driver.find_element(By.XPATH, param)
+    elif by_type == "ID":
+        element = driver.find_element(By.ID, param)
+    return element
+
+def auto_url_authorization(url):
+    CONFIG = config_reader()
+    chrome_options = Options()
+    chrome_options.add_argument("--headless")
+    chrome_driver_path = f'./resources/{platform.system()}/chromedriver'
+    driver = webdriver.Chrome(options=chrome_options, executable_path=chrome_driver_path, service_log_path='NUL')
+    driver.delete_all_cookies()
+    driver.get(url)
+
+    email_input_box = element_grabber(driver,
+        "/html/body/div[1]/div[1]/div[2]/div/div/div/div[2]/form/fieldset/div[1]/input")
+    # sending the email as input to the above field
+    email_input_box.send_keys(CONFIG['EMAIL_ID'])
+    print("🔱 Sending the EMAIL ID...")
+
+    # grabbing the password field
+    password_textbox = element_grabber(driver,
+        "/html/body/div[1]/div[1]/div[2]/div/div/div/div[2]/form/fieldset/div[2]/input")
+    # sending the password as input to the above field
+    password_textbox.send_keys(CONFIG['PASSWORD'])
+    print("🔑 Sending the Password... ")
+    # grabbing sign in button
+    sign_btn = element_grabber(driver,
+        "/html/body/div[1]/div[1]/div[2]/div/div/div/div[2]/form/fieldset/div[5]/input")
+    # submitting the login form
+    sign_btn.click()
+    current_url = driver.current_url
+    if "oauth_token" in current_url:
+        print("🧭 OAuth Token Found !")
+    if "authorize=1" in current_url:
+        print("🎉 OAuth Successful !")
+        driver.quit()
+        return 200
 
 def oauth_validator():
     CONFIG = config_reader()
@@ -117,12 +170,11 @@ def oauth_validator():
     request_token, request_token_secret = goodreads.get_request_token(header_auth=True)
 
     authorize_url = goodreads.get_authorize_url(request_token)
-    print('Visit this URL in your browser: ' + authorize_url)
-    accepted = 'n'
-    while accepted.lower() == 'n':
-        # you need to access the authorize_link via a browser,
-        # and proceed to manually authorize the consumer
-        accepted = input('Have you authorized me? (y/n) ')
+    print('✔️ Starting OAuth...')
+    print('Visiting this URL in your browser: ' + authorize_url)
+    response = auto_url_authorization(authorize_url)
+    if response == 200:
+        print("🆗 Application has been OAuth")
 
     session = goodreads.get_auth_session(request_token, request_token_secret)
 
@@ -165,3 +217,16 @@ def get_page_content_response(url):
     response = requests.get(url)
     # converting response_xml to dict
     return make_html_soup(response.content.decode('utf-8', 'ignore'))
+
+def perform_parallel_tasks(function, items) -> List:
+    results = []
+    # using multithreading concept to fasten the web pull
+    with ThreadPoolExecutor(50) as executor:
+        # executing GET request of link asynchronously
+        futures = [executor.submit(function, item) for item in items]
+        # pulling the results from the concurrent execution array `futures`
+        for result in concurrent.futures.as_completed(futures):
+            # this gives me a list of future object
+            results.append(result)
+
+    return results

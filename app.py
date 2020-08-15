@@ -17,9 +17,9 @@ try:
     from bs4 import BeautifulSoup
     from collections import defaultdict
     from support.auxillary import config_reader, make_html_soup, oauth_validator, clean_up, get_auth_api_response, \
-        file_creator, get_api_response, get_page_content_response
+    file_creator, get_api_response, get_page_content_response, perform_parallel_tasks
     from associate_runner import book_provider, reviews_provider, write_book_object_to_file, \
-        write_review_object_to_file, write_reviewer_object_to_file
+    write_review_object_to_file, write_reviewer_object_to_file, reviewer_provider
 
 except Exception as e:
     print(e)
@@ -44,7 +44,6 @@ write_book_object_to_file(book_file, None, mode="init")
 write_review_object_to_file(review_file, None, mode="init")
 write_reviewer_object_to_file(reviewer_file, None, mode="init")
 
-pp = pprint.PrettyPrinter(indent=4)
 
 
 def links_flattener(matrix):
@@ -61,20 +60,6 @@ def perform_reviews_links_task(cumulative_reviews_url_for_one_book) -> List:
 
     flattened_links = links_flattener(review_specific_links_for_one_book)
     return flattened_links
-
-
-def perform_parallel_tasks(function, items) -> List:
-    results = []
-    # using multithreading concept to fasten the web pull
-    with ThreadPoolExecutor(50) as executor:
-        # executing GET request of link asynchronously
-        futures = [executor.submit(function, item) for item in items]
-        # pulling the results from the concurrent execution array `futures`
-        for result in concurrent.futures.as_completed(futures):
-            # this gives me a list of future object
-            results.append(result)
-
-    return results
 
 
 def get_links(table_rows) -> List:
@@ -101,9 +86,8 @@ def get_href_links_from_reviews(link) -> List:
     href_links = [a_tag.get('href') for a_tag in a_tags_in_a_page]
     return href_links
 
-
 def link_navigator():
-    print("Execution starts here 🔥 ...", end="\n\n")
+    print("🔥 Execution starts here...", end="\n\n")
     try:
         for child_url in CONFIG['CHILD_URLS']:
             page = 0
@@ -111,10 +95,10 @@ def link_navigator():
                 page += 1
                 # appending pages to the url
                 usage_url = child_url + f"?page={page}"
-                print(f"Getting page of {page} : Child URL 🌍: {usage_url}", end="\n\n")
+                print(f"🌍 Getting page of {page} : Child URL : {usage_url}", end="\n\n")
                 # going to the first page of the child_url
                 response = requests.get(usage_url)
-                print(f"Server RTT : {response.elapsed.total_seconds()} secs")
+                print(f"⌛ Server RTT : {response.elapsed.total_seconds()} secs")
                 # grabbing the html content of the requests
                 html = response.content
                 # now we make a Beautiful Soup out of the html
@@ -158,7 +142,7 @@ def link_navigator():
                         # writing the book object to the output file
                         write_book_object_to_file(book_file, book, "normal")
 
-                print(f"🧩 Successfully pulled {len(books_list)} out of {len(table_rows)} books' info..")
+                print(f"🧩 Successfully pulled {len(books_list)} out of {len(table_rows)} books' info...")
 
                 # ====================#################==============================
                 # pulling REVIEWS INFO from bookreads api
@@ -175,7 +159,6 @@ def link_navigator():
                 for cumulative_reviews_url_for_one_book in cumulative_reviews_urls_for_all_books:
                     start_time = time.perf_counter()
                     row += 1
-                    temp = []
                     print(f"🛒 Starting reviews pull of book {row}...")
                     # grabbing all the review links across all the pages of a book
                     specific_review_links_list = perform_reviews_links_task(cumulative_reviews_url_for_one_book)
@@ -186,25 +169,33 @@ def link_navigator():
                     reviewer_results = [reviewer_result.result() for reviewer_result in perform_parallel_tasks(get_reviewers_links, review_content_results)]
                     # storing all the reviewer urls
                     cumulative_reviewer_urls.append(reviewer_results)
-                    print(f"🔊 Pulled {len(cumulative_reviewer_urls[row-1])} reviews of book {row} ==> {round(time.perf_counter() - start_time, 3)} secs...")
+                    print(f"🔊 Pulled {len(cumulative_reviewer_urls[row-1])} reviews of book {row} ==> {round(time.perf_counter() - start_time, 3)} secs... ")
+
+                    break
 
                 # ====================#################==============================
                 # pulling reviewers info from bookreads api
+                temp = []
+                cumulative_reviewer_urls = cumulative_reviewer_urls[0]
+                for cumulative_reviewer_url in cumulative_reviewer_urls:
+                    temp.append(cumulative_reviewer_url[0])
+                cumulative_reviewer_urls = temp
 
+                reviewer_list = []
+                for reviewer_url in cumulative_reviewer_urls:
+                    start_time = time.perf_counter()
+                    reviewer_id = re.findall(r'(\d{1,13})', reviewer_url)[0]
+                    print(f"🔉 Starting to pull info on reviewer ID : {reviewer_id}...")
+                    dict_response, json_response = get_api_response(reviewer_url)
+                    reviewer = reviewer_provider(dict_response=dict_response, json_response=json_response)
+                    print(reviewer)
+                    reviewer_list.append(reviewer)
+                    print(f"🔊 Pulled info on reviewer ID : {reviewer_id} ==> {round(time.perf_counter() - start_time, 3)} secs...")
+                    # input("Do you want to continue ?")
 
-
-
-
-
-
-
-
-
+                    # break
 
                 # ====================#################==============================
-                # pulling REVIEWERS INFO from bookreads api
-                pp.pprint(cumulative_reviewer_urls)
-                reviewer_api_hit_results = []
 
                 break
             break
@@ -219,8 +210,8 @@ def link_navigator():
 if __name__ == "__main__":
 
     # Registering the app.py with OAuth
-    # oauth_validator()
+    oauth_validator()
     link_navigator()
     # cleaning up project, closing files, etc
     clean_up([book_file, review_file, reviewer_file])
-    input("\n\n\nPress enter to exit 🚀...")
+    input("\n\n\nPress enter to exit... 💯")
