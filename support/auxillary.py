@@ -99,7 +99,7 @@ def get_auth_api_response(url, field, value, page=1):
                                                      auth_config_reader()['ACCESS_TOKEN'], auth_config_reader()[
                                                          'ACCESS_TOKEN_SECRET']
     url = url.replace(field, value)
-    print(url)
+    print(f"URL ==> {url}")
     new_session = OAuth1Session(
         consumer_key=key,
         consumer_secret=secret,
@@ -108,7 +108,8 @@ def get_auth_api_response(url, field, value, page=1):
     )
     params = {'key': key, 'page': page}
     response = new_session.get(url=url, params=params)
-    return response_to_json_dict(response)
+    return tuple(response_to_json_dict(response))
+
 
 def element_grabber(driver, param, by_type="xpath"):
     #  Grabbing elements by either xpath or id using find_element() in driver for our Selenium
@@ -118,6 +119,7 @@ def element_grabber(driver, param, by_type="xpath"):
     elif by_type == "ID":
         element = driver.find_element(By.ID, param)
     return element
+
 
 def auto_url_authorization(url):
     CONFIG = config_reader()
@@ -129,20 +131,20 @@ def auto_url_authorization(url):
     driver.get(url)
 
     email_input_box = element_grabber(driver,
-        "/html/body/div[1]/div[1]/div[2]/div/div/div/div[2]/form/fieldset/div[1]/input")
+                                      "/html/body/div[1]/div[1]/div[2]/div/div/div/div[2]/form/fieldset/div[1]/input")
     # sending the email as input to the above field
     email_input_box.send_keys(CONFIG['EMAIL_ID'])
     print("🔱 Sending the EMAIL ID...")
 
     # grabbing the password field
     password_textbox = element_grabber(driver,
-        "/html/body/div[1]/div[1]/div[2]/div/div/div/div[2]/form/fieldset/div[2]/input")
+                                       "/html/body/div[1]/div[1]/div[2]/div/div/div/div[2]/form/fieldset/div[2]/input")
     # sending the password as input to the above field
     password_textbox.send_keys(CONFIG['PASSWORD'])
     print("🔑 Sending the Password... ")
     # grabbing sign in button
     sign_btn = element_grabber(driver,
-        "/html/body/div[1]/div[1]/div[2]/div/div/div/div[2]/form/fieldset/div[5]/input")
+                               "/html/body/div[1]/div[1]/div[2]/div/div/div/div[2]/form/fieldset/div[5]/input")
     # submitting the login form
     sign_btn.click()
     current_url = driver.current_url
@@ -152,6 +154,7 @@ def auto_url_authorization(url):
         print("🎉 OAuth Successful !")
         driver.quit()
         return 200
+
 
 def oauth_validator():
     CONFIG = config_reader()
@@ -174,7 +177,7 @@ def oauth_validator():
     print('Visiting this URL in your browser: ' + authorize_url)
     response = auto_url_authorization(authorize_url)
     if response == 200:
-        print("🆗 Application has been OAuth")
+        print("🆗 GoodreadsAPI Project has been authorized with OAuth")
 
     session = goodreads.get_auth_session(request_token, request_token_secret)
 
@@ -208,9 +211,10 @@ def clean_up(files):
 def file_creator(filenames):
     files = []
     for filename in filenames:
-        file = open(filename, "w",  encoding="utf-8" ,newline='')
+        file = open(filename, "w", encoding="utf-8", newline='')
         files.append(file)
     return files
+
 
 def get_page_content_response(url):
     # requesting response from url
@@ -218,12 +222,18 @@ def get_page_content_response(url):
     # converting response_xml to dict
     return make_html_soup(response.content.decode('utf-8', 'ignore'))
 
+
 def perform_parallel_tasks(function, items) -> List:
     results = []
     # using multithreading concept to fasten the web pull
     with ThreadPoolExecutor(50) as executor:
         # executing GET request of link asynchronously
-        futures = [executor.submit(function, item) for item in items]
+        futures = []
+        for item in items:
+            if isinstance(item, list):
+                futures.append(executor.submit(function, *item))
+            else:
+                futures.append(executor.submit(function, item))
         # pulling the results from the concurrent execution array `futures`
         for result in concurrent.futures.as_completed(futures):
             # this gives me a list of future object

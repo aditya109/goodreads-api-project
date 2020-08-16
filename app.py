@@ -186,6 +186,7 @@ def link_navigator():
                     start_time = time.perf_counter()
                     reviewer_id = re.findall(r'(\d{1,13})', reviewer_url)[0]
                     print(f"🔉 Starting to pull info on reviewer ID : {reviewer_id}...")
+                    print(f"🌏 URL : {reviewer_url}")
                     dict_response, json_response = get_api_response(reviewer_url)
                     reviewer = reviewer_provider(dict_response=dict_response, json_response=json_response)
                     print(reviewer)
