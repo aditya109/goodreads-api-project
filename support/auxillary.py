@@ -206,7 +206,7 @@ def oauth_validator():
 def perform_parallel_tasks(function, items) -> List:
     results = []
     # using multithreading concept to fasten the web pull
-    with ThreadPoolExecutor(50) as executor:
+    with ThreadPoolExecutor(25) as executor:
         # executing GET request of link asynchronously
         futures = []
         for item in items:

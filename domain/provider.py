@@ -248,12 +248,14 @@ def reviewer_provider(dict_response, CONFIG):
                     # grabbing list of all following
                     following_hit_result = dict_response['GoodreadsResponse']['following']['user']
                     # appending user ID to following[]
-                    for f in following_hit_result:
-                        following.append(f['id'])
+                    if isinstance(following_hit_result, list):
+                        for f in following_hit_result:
+                            following.append(f['id'])
+                    else:
+                        following.append(following_hit_result['id'])
             print(f"Total Following pulled : {len(following)}/{total_number_of_following}")
             # putting following[] to reviewer
             reviewer = reviewer.hasFollowing(following)
-
 
         # grabbing list of users(reviewer) following reviewer of interest
         (dict_response, json_response) = get_auth_api_response(CONFIG['FOLLOWERS_INFO_ENDPOINT'], 'USERID',
@@ -302,8 +304,11 @@ def reviewer_provider(dict_response, CONFIG):
                     # grabbing list of all followers
                     follower_hit_result = dict_response['GoodreadsResponse']['followers']['user']
                     # appending user ID to followers[]
-                    for f in follower_hit_result:
-                        followers.append(f['id'])
+                    if isinstance(follower_hit_result, list):
+                        for f in follower_hit_result:
+                            followers.append(f['id'])
+                    else:
+                        followers.append(follower_hit_result['id'])
             print(f"Total Followers pulled : {len(followers)}/{total_number_of_followers}")
             # putting followers[] to reviewer
             reviewer = reviewer.hasFollowers(followers)

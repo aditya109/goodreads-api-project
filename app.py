@@ -173,7 +173,6 @@ def link_navigator():
                     cumulative_reviewer_urls.append(reviewer_results)
                     print(
                         f"🔊 Pulled {len(cumulative_reviewer_urls[row - 1])} reviews of book {row} ==> {round(time.perf_counter() - start_time, 3)} secs... ")
-
                     break
 
                 # ====================#################==============================
@@ -185,25 +184,18 @@ def link_navigator():
                 cumulative_reviewer_urls = temp
 
                 reviewer_list = []
+                # TODO Rate the amount of requests
                 for reviewer_url in cumulative_reviewer_urls:
-                    # dict_response, json_response = get_api_response(
-                    #     "https://www.goodreads.com/user/show/1100870.xml?key=OKwj2qRaOnsUBJqogIu8tw")
-                    # reviewer = reviewer_provider(dict_response=dict_response, CONFIG=CONFIG)
-                    # break
-
                     start_time = time.perf_counter()
                     reviewer_id = re.findall(r'(\d{1,13})', reviewer_url)[0]
                     print(f"🔉 Starting to pull info on reviewer ID : {reviewer_id}...")
                     print(f"🌏 URL : {reviewer_url}")
                     dict_response, json_response = get_api_response(reviewer_url)
                     reviewer = reviewer_provider(dict_response=dict_response, CONFIG=CONFIG)
-                    print(
-                    "\n\n============================>")
+                    print("\n\n============================>")
+                    write_reviewer_object_to_file(file=reviewer_file, reviewer=reviewer, mode="normal")
                     reviewer_list.append(reviewer)
                     print(f"🔊 Pulled info on reviewer ID : {reviewer_id} ==> {round(time.perf_counter() - start_time, 3)} secs...")
-                    # input("Do you want to continue ?")
-
-                    # break
 
                 # ====================#################==============================
 
