@@ -1,4 +1,8 @@
 class Book:
+    """
+    Book class for the storing `Book` information
+    """
+
     def __init__(self, book_name, authors, ID, isbn, isbn13, publication_date, best_book_id, reviews_count,
                  ratings_sum, ratings_count, text_reviews_count, average_rating):
         self.book_name = book_name
@@ -87,21 +91,25 @@ class Book:
         self.average_ratings = value
 
     def Wingardium_Leviosa(self):
-        print( f"Book Name : {self.book_name}\n" \
-               f"Authors : {self.authors}\n" \
-               f"ID(Goodreads) : {self.id}\n" \
-               f"ISBN : {self.isbn}\n" \
-               f"ISBN13 : {self.isbn13}\n" \
-               f"Publication Date : {self.publication_date}\n" \
-               f"Best Book ID : {self.best_book_id}\n" \
-               f"Reviews Count : {self.reviews_count}\n" \
-               f"Ratings Sum : {self.ratings_sum}\n" \
-               f"Ratings Count : {self.ratings_count}\n" \
-               f"Text Reviews Count : {self.text_reviews_count}\n" \
-               f"Average Ratings : {self.average_ratings}")
+        print(f"Book Name : {self.book_name}\n"
+              f"Authors : {self.authors}\n"
+              f"ID(Goodreads) : {self.id}\n"
+              f"ISBN : {self.isbn}\n"
+              f"ISBN13 : {self.isbn13}\n"
+              f"Publication Date : {self.publication_date}\n"
+              f"Best Book ID : {self.best_book_id}\n"
+              f"Reviews Count : {self.reviews_count}\n"
+              f"Ratings Sum : {self.ratings_sum}\n"
+              f"Ratings Count : {self.ratings_count}\n"
+              f"Text Reviews Count : {self.text_reviews_count}\n"
+              f"Average Ratings : {self.average_ratings}")
 
 
 class BookBuilder:
+    """
+    BookBuilder class for piecewise contruction of `Book` object
+    """
+
     def __init__(self):
         self.book_name = ""
         self.authors = []
@@ -128,8 +136,8 @@ class BookBuilder:
         self.authors = authors
         return self
 
-    def hasId(self, id):
-        self.id = id
+    def hasId(self, Id):
+        self.id = Id
         return self
 
     def hasISBN(self, isbn):
@@ -172,9 +180,3 @@ class BookBuilder:
         return Book(self.book_name, self.authors, self.id, self.isbn, self.isbn13, self.publication_date,
                     self.best_book_id, self.reviews_count, self.ratings_sum, self.ratings_count,
                     self.text_reviews_count, self.average_ratings)
-
-#
-# reviewer = BookBuilder.initialize().withBookName("The Girl with the Dragon Tattoo").hasAuthors(["Stieg Larsson", "Reg Keeland"]).hasId("2429135").wasPublishedOn("16-9-2008").hasBestBookId("2429135").hasReviewsCount("3677258").hasRatingsSum(
-#         "10596196").hasRatingsCount("2561726").hasTextReviewsCount("68261").hasAverageRatings("4.14").build()
-#
-# print(reviewer)

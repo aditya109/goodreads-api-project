@@ -2,20 +2,14 @@ try:
     import json
     import csv
     import re
-    import pprint
-
     from bs4 import BeautifulSoup
     from domain.book import BookBuilder
     from domain.review import ReviewBuilder
     from domain.reviewer import ShelfBuilder, ReviewerBuilder
     import requests
-    from support.auxillary import config_reader, response_to_json_dict, make_html_soup, get_api_response, \
-        oauth_validator, \
-        get_auth_api_response, perform_parallel_tasks
+    from support.auxillary import *
 except Exception as e:
     print(e)
-
-pp = pprint.PrettyPrinter(indent=2)
 
 
 def book_provider(dict_response, json_response):
@@ -41,7 +35,7 @@ def book_provider(dict_response, json_response):
     book = book.hasAuthors(authors_list)
 
     # adding ID
-    ID = dict_response['GoodreadsResponse']['book']['id']
+    ID = dict_response['GoodreadsResponse']['book']['Id']
     book = book.hasId(ID)
 
     # adding ISBN
@@ -102,6 +96,7 @@ def book_provider(dict_response, json_response):
         soup = BeautifulSoup(review_widgets_json, features="html.parser")
         review_url = soup.find('iframe').get('src')
 
+        # building the `book` object
         book = book.build()
 
         return book, review_url
@@ -117,29 +112,35 @@ def reviews_provider(soup):
     page_url = soup.find('link').get('href')
     # using REGEX expression to extract review_id
     review_id = re.findall(r'(\d{1,13})', page_url)[0]
-    # adding review_id to `review` object
+    # adding review_id
     review = review.hasReviewID(review_id)
 
+    # grabbing the reviewer ID
     reviewer_page = soup.find('h1').find('a').get('href')
     reviewer_id = re.findall(r'(\d{1,13})', reviewer_page)[0]
     review = review.byReviewerID(reviewer_id)
 
+    # grabbing ratings
     rating = soup.find(
         'meta', attrs={'itemprop': 'ratingValue'}).get('content')
     review = review.hasRating(rating)
 
+    # grabbing review text
     review_text = soup.find(
         'div', attrs={'itemprop': 'reviewBody'}).get_text().strip()
     review = review.hasText(review_text)
 
+    # grabbing likes
     likes = soup.find('span', attrs={'class': 'likesCount'})
     if likes is not None:
         likes = likes.get_text().split(' likes')[0].strip()
         review = review.hasLikes(likes)
 
+    # grabbing book ID
     book_url = soup.find('a', attrs={'class': 'bookTitle', 'itemprop': 'url'}).get('href')
     book_id = re.findall(r'(\d{1,13})', book_url)[0]
     review = review.hasBookId(book_id=book_id)
+    # building `review` object
     review = review.build()
 
     return review
@@ -150,7 +151,7 @@ def reviewer_provider(dict_response, CONFIG):
     reviewer = ReviewerBuilder.initialize()
 
     # grabbing reviewer ID
-    reviewer_id = dict_response['GoodreadsResponse']['user']['id']
+    reviewer_id = dict_response['GoodreadsResponse']['user']['Id']
     reviewer = reviewer.hasID(reviewer_id)
 
     # grabbing reviewer ID
@@ -173,7 +174,7 @@ def reviewer_provider(dict_response, CONFIG):
             shelf = ShelfBuilder.initialize()
 
             # grabbing shelf ID
-            shelf_id = temp_shelf['id']['#text']
+            shelf_id = temp_shelf['Id']['#text']
             shelf = shelf.hasShelfID(shelf_id)
 
             # grabbing shelf Name
@@ -220,14 +221,14 @@ def reviewer_provider(dict_response, CONFIG):
 
             if total_number_of_following == "1":
                 # checking if total number of following is 1
-                following.append(following_['id'])
+                following.append(following_['Id'])
             elif total_number_of_following == "0":
                 # skipping if total number of following is 0
                 pass
             else:
                 # extracting all following ID and appending to following[]
                 for f in following_:
-                    following.append(f['id'])
+                    following.append(f['Id'])
             # calculating pages for simultaneous page pulls
             # EACH API HIT ONLY CONTAINS 30 RESULTS
             if int(total_number_of_following) > 30:
@@ -250,9 +251,9 @@ def reviewer_provider(dict_response, CONFIG):
                     # appending user ID to following[]
                     if isinstance(following_hit_result, list):
                         for f in following_hit_result:
-                            following.append(f['id'])
+                            following.append(f['Id'])
                     else:
-                        following.append(following_hit_result['id'])
+                        following.append(following_hit_result['Id'])
             print(f"Total Following pulled : {len(following)}/{total_number_of_following}")
             # putting following[] to reviewer
             reviewer = reviewer.hasFollowing(following)
@@ -276,14 +277,14 @@ def reviewer_provider(dict_response, CONFIG):
 
             if total_number_of_followers == "1":
                 # checking if total number of followers is 1
-                followers.append(followers_['id'])
+                followers.append(followers_['Id'])
             elif total_number_of_followers == "0":
                 # skipping if total number of followers is 0
                 pass
             else:
                 # extracting all followers ID and appending to followers[]
                 for f in followers_:
-                    followers.append(f['id'])
+                    followers.append(f['Id'])
             # calculating pages for simultaneous page pulls
             # EACH API HIT ONLY CONTAINS 30 RESULTS
             if int(total_number_of_followers) > 30:
@@ -306,9 +307,9 @@ def reviewer_provider(dict_response, CONFIG):
                     # appending user ID to followers[]
                     if isinstance(follower_hit_result, list):
                         for f in follower_hit_result:
-                            followers.append(f['id'])
+                            followers.append(f['Id'])
                     else:
-                        followers.append(follower_hit_result['id'])
+                        followers.append(follower_hit_result['Id'])
             print(f"Total Followers pulled : {len(followers)}/{total_number_of_followers}")
             # putting followers[] to reviewer
             reviewer = reviewer.hasFollowers(followers)

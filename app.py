@@ -156,6 +156,7 @@ def link_navigator():
                 # `cumulative_reviewer_urls` to store all the reviewer API hitpoints
                 cumulative_reviewer_urls = []
                 row = 0
+                start_time = time.perf_counter()
                 # iterating through all the `cumulative_reviews_urls_for_all_books`
                 for cumulative_reviews_url_for_one_book in cumulative_reviews_urls_for_all_books:
                     start_time = time.perf_counter()
@@ -173,34 +174,38 @@ def link_navigator():
                     cumulative_reviewer_urls.append(reviewer_results)
                     print(
                         f"🔊 Pulled {len(cumulative_reviewer_urls[row - 1])} reviews of book {row} ==> {round(time.perf_counter() - start_time, 3)} secs... ")
-                    break
-
+                print(f"Pulled {len(cumulative_reviews_urls_for_all_books)} reviews : {round(time.perf_counter() - start_time, 3)} secs...")
                 # ====================#################==============================
                 # pulling reviewers info from bookreads api
+                # flattening the 2D list
                 temp = []
                 cumulative_reviewer_urls = cumulative_reviewer_urls[0]
                 for cumulative_reviewer_url in cumulative_reviewer_urls:
                     temp.append(cumulative_reviewer_url[0])
                 cumulative_reviewer_urls = temp
 
+                # list for storing all reviewers
                 reviewer_list = []
-                # TODO Rate the amount of requests
+                start_time = time.perf_counter()
+                # iterating through all reviewer urls
                 for reviewer_url in cumulative_reviewer_urls:
                     start_time = time.perf_counter()
+                    # using REGEX to extract reviewer ID
                     reviewer_id = re.findall(r'(\d{1,13})', reviewer_url)[0]
                     print(f"🔉 Starting to pull info on reviewer ID : {reviewer_id}...")
                     print(f"🌏 URL : {reviewer_url}")
+                    # get the api response for the above reviewer url
                     dict_response, json_response = get_api_response(reviewer_url)
+                    # using the reviewer_provider() to provide reviewer object
                     reviewer = reviewer_provider(dict_response=dict_response, CONFIG=CONFIG)
                     print("\n\n============================>")
+                    # writing the reviewer object to the file
                     write_reviewer_object_to_file(file=reviewer_file, reviewer=reviewer, mode="normal")
+                    # appending the reviewer to the container list
                     reviewer_list.append(reviewer)
                     print(f"🔊 Pulled info on reviewer ID : {reviewer_id} ==> {round(time.perf_counter() - start_time, 3)} secs...")
+                print(f"Pulled {len(reviewer_list)}/{len(cumulative_reviewer_urls)} reviewers : {round(time.perf_counter() - start_time, 3)} secs...")
 
-                # ====================#################==============================
-
-                break
-            break
     except Exception as E:
         traceback.print_exc()
         print(E)

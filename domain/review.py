@@ -1,4 +1,7 @@
 class Review:
+    """
+    Review class for storing `Review` information
+    """
     def __init__(self, ID, reviewer_id, rating, likes, review, book_id):
         self.review_id = ID
         self.reviewer_id = reviewer_id
@@ -54,6 +57,9 @@ class Review:
 
 
 class ReviewBuilder:
+    """
+    ReviewBuilder class for piecewise contruction of `Review` object
+    """
     def __init__(self):
         self.review_id = ""
         self.reviewer_id = ""
@@ -92,8 +98,3 @@ class ReviewBuilder:
 
     def build(self):
         return Review(self.review_id, self.reviewer_id, self.rating, self.likes, self.review, self.book_id)
-
-# reviewer = ReviewBuilder.initialize() reviewer = reviewer.hasReviewID("").byReviewerName("").byReviewerID("").hasRating(
-# "").hasLikes("").hasBookId("").hasBookISBN("").build()
-#
-# reviewer.Wingardium_Leviosa()

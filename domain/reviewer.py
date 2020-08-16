@@ -1,4 +1,8 @@
 class Reviewer:
+    """
+    Reviewer class is used for storing `Reviewer` information
+    """
+
     def __init__(self, reviewer_name, reviewer_id, shelves, number_of_reviews, friends_count, following, followers):
         self.reviewer_name = reviewer_name
         self.reviewer_id = reviewer_id
@@ -43,11 +47,14 @@ class Reviewer:
 
 
 class Shelf:
+    """
+    Shelf class is used for storing `Shelf` information
+    """
+
     def __init__(self, shelf_id, shelf_name, book_count):
         self.shelf_id = shelf_id
         self.shelf_name = shelf_name
         self.book_count = book_count
-
 
     def get_shelf_id(self):
         return self.shelf_id
@@ -66,6 +73,10 @@ class Shelf:
 
 
 class ShelfBuilder:
+    """
+    ShelfBuilder class for piecewise contruction of `Shelf` object
+    """
+
     def __init__(self):
         self.shelf_id = ""
         self.shelf_name = ""
@@ -92,6 +103,10 @@ class ShelfBuilder:
 
 
 class ReviewerBuilder:
+    """
+    ReviewerBuilder class for piecewise contruction of `Reviewer` object
+    """
+
     def __init__(self):
         self.reviewer_name = ""
         self.reviewer_id = ""
