@@ -16,10 +16,8 @@ try:
     from concurrent.futures.thread import ThreadPoolExecutor
     from bs4 import BeautifulSoup
     from collections import defaultdict
-    from support.auxillary import config_reader, make_html_soup, oauth_validator, clean_up, get_auth_api_response, \
-    file_creator, get_api_response, get_page_content_response, perform_parallel_tasks
-    from associate_runner import book_provider, reviews_provider, write_book_object_to_file, \
-    write_review_object_to_file, write_reviewer_object_to_file, reviewer_provider
+    from support.auxillary import *
+    from domain.provider import book_provider, reviews_provider, reviewer_provider
 
 except Exception as e:
     print(e)
@@ -43,7 +41,6 @@ book_file, review_file, reviewer_file = file_creator(filenames)
 write_book_object_to_file(book_file, None, mode="init")
 write_review_object_to_file(review_file, None, mode="init")
 write_reviewer_object_to_file(reviewer_file, None, mode="init")
-
 
 
 def links_flattener(matrix):
@@ -80,11 +77,13 @@ def get_reviewers_links(review_content_result):
         CONFIG['REVIEWER_INFO_ENDPOINT'].replace('USERID', reviewer_id).replace('DEVELOPER_ID', CONFIG['CLIENT_KEY']))
     return reviewer_urls
 
+
 def get_href_links_from_reviews(link) -> List:
     html = get_page_content_response(link)
     a_tags_in_a_page = html.find_all('a', attrs={'class': 'gr_more_link'})
     href_links = [a_tag.get('href') for a_tag in a_tags_in_a_page]
     return href_links
+
 
 def link_navigator():
     print("🔥 Execution starts here...", end="\n\n")
@@ -133,7 +132,9 @@ def link_navigator():
                     if book is not None:
                         # appending all the book objects to the `books_list`
                         books_list.append(book)
-                        # some books who dirctly don't have XML field `ISBN` don't have `isbn` in their review url, thereby invalidating it, hence we find explicitly find the ISBN value and append it to the review url
+                        # some books who dirctly don't have XML field `ISBN` don't have `isbn` in their review url,
+                        # thereby invalidating it, hence we find explicitly find the ISBN value and append it to the
+                        # review url
                         if "isbn" not in review_url:
                             review_url = review_url + f"&isbn={book.get_isbn()}"
                         # replacing `DEVELOPER_ID` with `CLIENT KEY`
@@ -166,10 +167,12 @@ def link_navigator():
                     review_content_results = perform_parallel_tasks(get_page_content_response,
                                                                     specific_review_links_list)
                     # accumulating all the reviewer links from accumalated html contents
-                    reviewer_results = [reviewer_result.result() for reviewer_result in perform_parallel_tasks(get_reviewers_links, review_content_results)]
+                    reviewer_results = [reviewer_result.result() for reviewer_result in
+                                        perform_parallel_tasks(get_reviewers_links, review_content_results)]
                     # storing all the reviewer urls
                     cumulative_reviewer_urls.append(reviewer_results)
-                    print(f"🔊 Pulled {len(cumulative_reviewer_urls[row-1])} reviews of book {row} ==> {round(time.perf_counter() - start_time, 3)} secs... ")
+                    print(
+                        f"🔊 Pulled {len(cumulative_reviewer_urls[row - 1])} reviews of book {row} ==> {round(time.perf_counter() - start_time, 3)} secs... ")
 
                     break
 
@@ -183,13 +186,19 @@ def link_navigator():
 
                 reviewer_list = []
                 for reviewer_url in cumulative_reviewer_urls:
+                    # dict_response, json_response = get_api_response(
+                    #     "https://www.goodreads.com/user/show/1100870.xml?key=OKwj2qRaOnsUBJqogIu8tw")
+                    # reviewer = reviewer_provider(dict_response=dict_response, CONFIG=CONFIG)
+                    # break
+
                     start_time = time.perf_counter()
                     reviewer_id = re.findall(r'(\d{1,13})', reviewer_url)[0]
                     print(f"🔉 Starting to pull info on reviewer ID : {reviewer_id}...")
                     print(f"🌏 URL : {reviewer_url}")
                     dict_response, json_response = get_api_response(reviewer_url)
-                    reviewer = reviewer_provider(dict_response=dict_response, json_response=json_response)
-                    print(reviewer)
+                    reviewer = reviewer_provider(dict_response=dict_response, CONFIG=CONFIG)
+                    print(
+                    "\n\n============================>")
                     reviewer_list.append(reviewer)
                     print(f"🔊 Pulled info on reviewer ID : {reviewer_id} ==> {round(time.perf_counter() - start_time, 3)} secs...")
                     # input("Do you want to continue ?")
@@ -209,7 +218,6 @@ def link_navigator():
 
 # START HERE
 if __name__ == "__main__":
-
     # Registering the app.py with OAuth
     oauth_validator()
     link_navigator()

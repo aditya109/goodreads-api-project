@@ -1,3 +1,5 @@
+import csv
+
 try:
     import os
     import json
@@ -20,28 +22,6 @@ try:
 except Exception as e:
     print(e)
 
-
-def response_to_json_dict(response):
-    # initializing a dict for storing response
-    dict_response = collections.defaultdict()
-    # initializing an empty string
-    json_response = ""
-    # checking response status code
-    if response.status_code == 200:
-
-        # print(f"Response Status Code : {response.status_code} ✔️", end="\n\n")
-        # decoding byte-xml response to `utf-8` string
-        string_xml_response = response.content.decode("utf-8")
-        # parsing `utf-8` to json
-        json_response = json.dumps(xmltodict.parse(string_xml_response))
-        # converting json to dict
-        dict_response = json.loads(json_response)
-    else:
-        print(f"Response Status Code : {response.status_code} ❌", end="\n\n")
-
-    return dict_response, json_response
-
-
 def auth_config_reader():
     # Provides OAuth access tokens and access token secret
     config = configparser.ConfigParser()
@@ -51,74 +31,6 @@ def auth_config_reader():
     CONFIG['ACCESS_TOKEN'] = config['SESSION']['access_token']
     CONFIG['ACCESS_TOKEN_SECRET'] = config['SESSION']['access_token_secret']
     return CONFIG
-
-
-def config_reader():
-    # reading the config files
-    config = configparser.ConfigParser()
-    CONFIG = dict()
-
-    # for Aditya
-    config.read("D:/Projects/config/config2.ini")
-
-    # for Manel
-    # config.read("./config.ini")
-
-    CONFIG['CLIENT_KEY'] = config['credentials']['client_key']  # string
-    CONFIG['CLIENT_SECRET'] = config['credentials']['client_secret']  # string
-    CONFIG['EMAIL_ID'] = config['credentials']['email']
-    CONFIG['PASSWORD'] = config['credentials']['password']
-
-    CONFIG['ROOT_URL'] = config['nav-links']['root_url']  # string
-    CONFIG['CHILD_URLS'] = config['nav-links']['child_urls'].split(',')  # string
-
-    CONFIG['BOOK_INFO_ENDPOINT'] = config['api-route']['book_info_endpoint']
-    CONFIG['REVIEWER_INFO_ENDPOINT'] = config['api-route']['reviewer_info_endpoint']
-    CONFIG['FOLLOWING_INFO_ENDPOINT'] = config['api-route']['following_info_endpoint']
-    CONFIG['FOLLOWERS_INFO_ENDPOINT'] = config['api-route']['followers_info_endpoint']
-
-    CONFIG['FILETYPE'] = config['settings']['filetype']
-
-    return CONFIG
-
-
-def make_html_soup(html):
-    # return BeautifulSoup object
-    return BeautifulSoup(html, features='lxml')
-
-
-def get_api_response(url):
-    # requesting response from url
-    response = requests.get(url)
-    # converting response_xml to dict
-    return response_to_json_dict(response)
-
-
-def get_auth_api_response(url, field, value, page=1):
-    key, secret, access_token, access_token_secret = config_reader()['CLIENT_KEY'], config_reader()['CLIENT_SECRET'], \
-                                                     auth_config_reader()['ACCESS_TOKEN'], auth_config_reader()[
-                                                         'ACCESS_TOKEN_SECRET']
-    url = url.replace(field, value)
-    print(f"URL ==> {url}")
-    new_session = OAuth1Session(
-        consumer_key=key,
-        consumer_secret=secret,
-        access_token=access_token,
-        access_token_secret=access_token_secret,
-    )
-    params = {'key': key, 'page': page}
-    response = new_session.get(url=url, params=params)
-    return tuple(response_to_json_dict(response))
-
-
-def element_grabber(driver, param, by_type="xpath"):
-    #  Grabbing elements by either xpath or id using find_element() in driver for our Selenium
-    element = None
-    if by_type == "xpath":
-        element = driver.find_element(By.XPATH, param)
-    elif by_type == "ID":
-        element = driver.find_element(By.ID, param)
-    return element
 
 
 def auto_url_authorization(url):
@@ -154,6 +66,101 @@ def auto_url_authorization(url):
         print("🎉 OAuth Successful !")
         driver.quit()
         return 200
+
+
+def clean_up(files):
+    try:
+        os.remove("auth.ini")
+        for file in files:
+            file.close()
+    except FileNotFoundError as e:
+        print("File Not Found : auth.ini")
+    except Exception as E:
+        print("Error in removing auth.ini. Kindly remove it manually !")
+        traceback.print_exc()
+
+
+def config_reader():
+    # reading the config files
+    config = configparser.ConfigParser()
+    CONFIG = dict()
+
+    # for Aditya
+    config.read("D:/Projects/config/config2.ini")
+
+    # for Manel
+    # config.read("./config.ini")
+
+    CONFIG['CLIENT_KEY'] = config['credentials']['client_key']  # string
+    CONFIG['CLIENT_SECRET'] = config['credentials']['client_secret']  # string
+    CONFIG['EMAIL_ID'] = config['credentials']['email']
+    CONFIG['PASSWORD'] = config['credentials']['password']
+
+    CONFIG['ROOT_URL'] = config['nav-links']['root_url']  # string
+    CONFIG['CHILD_URLS'] = config['nav-links']['child_urls'].split(',')  # string
+
+    CONFIG['BOOK_INFO_ENDPOINT'] = config['api-route']['book_info_endpoint']
+    CONFIG['REVIEWER_INFO_ENDPOINT'] = config['api-route']['reviewer_info_endpoint']
+    CONFIG['FOLLOWING_INFO_ENDPOINT'] = config['api-route']['following_info_endpoint']
+    CONFIG['FOLLOWERS_INFO_ENDPOINT'] = config['api-route']['followers_info_endpoint']
+
+    CONFIG['FILETYPE'] = config['settings']['filetype']
+
+    return CONFIG
+
+
+def element_grabber(driver, param, by_type="xpath"):
+    #  Grabbing elements by either xpath or id using find_element() in driver for our Selenium
+    element = None
+    if by_type == "xpath":
+        element = driver.find_element(By.XPATH, param)
+    elif by_type == "ID":
+        element = driver.find_element(By.ID, param)
+    return element
+
+
+def file_creator(filenames):
+    files = []
+    for filename in filenames:
+        file = open(filename, "w", encoding="utf-8", newline='')
+        files.append(file)
+    return files
+
+
+def get_api_response(url):
+    # requesting response from url
+    response = requests.get(url)
+    # converting response_xml to dict
+    return response_to_json_dict(response)
+
+
+def get_auth_api_response(url, field, value, page=1):
+    key, secret, access_token, access_token_secret = config_reader()['CLIENT_KEY'], config_reader()['CLIENT_SECRET'], \
+                                                     auth_config_reader()['ACCESS_TOKEN'], auth_config_reader()[
+                                                         'ACCESS_TOKEN_SECRET']
+    url = url.replace(field, value)
+    print(f"URL ==> {url}")
+    new_session = OAuth1Session(
+        consumer_key=key,
+        consumer_secret=secret,
+        access_token=access_token,
+        access_token_secret=access_token_secret,
+    )
+    params = {'key': key, 'page': page}
+    response = new_session.get(url=url, params=params)
+    return tuple(response_to_json_dict(response))
+
+
+def get_page_content_response(url):
+    # requesting response from url
+    response = requests.get(url)
+    # converting response_xml to dict
+    return make_html_soup(response.content.decode('utf-8', 'ignore'))
+
+
+def make_html_soup(html):
+    # return BeautifulSoup object
+    return BeautifulSoup(html, features='lxml')
 
 
 def oauth_validator():
@@ -196,33 +203,6 @@ def oauth_validator():
         config.write(configfile)
 
 
-def clean_up(files):
-    try:
-        os.remove("auth.ini")
-        for file in files:
-            file.close()
-    except FileNotFoundError as e:
-        print("File Not Found : auth.ini")
-    except Exception as E:
-        print("Error in removing auth.ini. Kindly remove it manually !")
-        traceback.print_exc()
-
-
-def file_creator(filenames):
-    files = []
-    for filename in filenames:
-        file = open(filename, "w", encoding="utf-8", newline='')
-        files.append(file)
-    return files
-
-
-def get_page_content_response(url):
-    # requesting response from url
-    response = requests.get(url)
-    # converting response_xml to dict
-    return make_html_soup(response.content.decode('utf-8', 'ignore'))
-
-
 def perform_parallel_tasks(function, items) -> List:
     results = []
     # using multithreading concept to fasten the web pull
@@ -240,3 +220,118 @@ def perform_parallel_tasks(function, items) -> List:
             results.append(result)
 
     return results
+
+
+def response_to_json_dict(response):
+    # initializing a dict for storing response
+    dict_response = collections.defaultdict()
+    # initializing an empty string
+    json_response = ""
+    # checking response status code
+    if response.status_code == 200:
+
+        # print(f"Response Status Code : {response.status_code} ✔️", end="\n\n")
+        # decoding byte-xml response to `utf-8` string
+        string_xml_response = response.content.decode("utf-8")
+        # parsing `utf-8` to json
+        json_response = json.dumps(xmltodict.parse(string_xml_response))
+        # converting json to dict
+        dict_response = json.loads(json_response)
+    else:
+        print(f"Response Status Code : {response.status_code} ❌", end="\n\n")
+
+    return dict_response, json_response
+
+# OK
+def write_book_object_to_file(file, book=None, mode="normal"):
+    CONFIG = config_reader()
+    extension = CONFIG['FILETYPE']
+
+    if extension == "json":
+        json_obj = json.dumps(book.__dict__)
+        json.dump(json_obj, file)
+    elif extension == "csv":
+        writer = csv.writer(file, delimiter=',', quotechar='"')
+        if mode == "init":
+            writer.writerow(
+                ["book_name", "id", "authors", "isbn", "isbn13", "publication_date", "best_book_id", "reviews_count",
+                 "ratings_sum", "ratings_count", "text_reviews_count", "average_ratings"])
+        else:
+            writer.writerow([
+                book.book_name,
+                book.id,
+                book.authors,
+                book.isbn,
+                book.isbn13,
+                book.publication_date,
+                book.best_book_id,
+                book.reviews_count,
+                book.ratings_sum,
+                book.ratings_count,
+                book.text_reviews_count,
+                book.average_ratings
+            ])
+
+        file.flush()
+
+
+# OK
+def write_review_object_to_file(file, review=None, mode="normal"):
+    CONFIG = config_reader()
+    extension = CONFIG['FILETYPE']
+
+    if extension == "json":
+        json_obj = json.dumps(review.__dict__)
+        json.dump(json_obj, file)
+    elif extension == "csv":
+        writer = csv.writer(file, delimiter=',', quotechar='"')
+        if mode == "init":
+            writer.writerow(
+                ["review_id", "reviewer_id", "rating", "likes", "review", "book_id"])
+        else:
+            writer.writerow([
+                review.review_id,
+                review.reviewer_id,
+                review.rating,
+                review.likes,
+                review.review,
+                review.book_id
+            ])
+
+    file.flush()
+
+
+# OK
+def write_reviewer_object_to_file(file, reviewer=None, mode="normal"):
+    CONFIG = config_reader()
+    extension = CONFIG['FILETYPE']
+
+    if extension == "json":
+        json_obj = json.dumps(reviewer.__dict__)
+        json.dump(json_obj, file)
+    elif extension == "csv":
+        writer = csv.writer(file, delimiter=',', quotechar='"')
+        if mode == "init":
+            writer.writerow(
+                ["reviewer_name", "reviewer_id", "shelves", "number_of_reviews", "friends_count", "following",
+                 "followers"])
+        else:
+            shelves = []
+            for shelf in reviewer.shelves:
+                s = []
+                s.append(shelf.get_shelf_id())
+                s.append(shelf.get_shelf_name())
+                s.append(shelf.get_book_count())
+                shelves.append(s)
+            writer.writerow([
+                reviewer.reviewer_name,
+                reviewer.reviewer_id,
+                shelves,
+                reviewer.number_of_reviews,
+                reviewer.friends_count,
+                reviewer.following,
+                reviewer.followers
+
+            ])
+
+        file.flush()
