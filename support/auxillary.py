@@ -109,10 +109,10 @@ def config_reader():
     CONFIG = dict()
 
     # for Aditya
-    config.read("D:/Projects/config/config2.ini")
+    # config.read("D:/Projects/config/config2.ini")
 
     # for Manel
-    # config.read("./config.ini")
+    config.read("./config.ini")
 
     CONFIG['CLIENT_KEY'] = config['credentials']['client_key']  # str
     CONFIG['CLIENT_SECRET'] = config['credentials']['client_secret']  # str
