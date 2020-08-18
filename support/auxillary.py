@@ -1,14 +1,17 @@
 try:
     import os
     import csv
+    import time
     import json
     import requests
+    import winsound
     import platform
     import xmltodict
     import traceback
     import concurrent
     import collections
     import configparser
+    from tqdm import tqdm
     from bs4 import BeautifulSoup
     from typing import List
     from selenium import webdriver
@@ -20,6 +23,12 @@ try:
     from concurrent.futures.thread import ThreadPoolExecutor
 except Exception as e:
     print(e)
+
+
+def alert():
+    duration = 1000  # milliseconds
+    freq = 340  # Hz
+    winsound.Beep(freq, duration)
 
 
 def auth_config_reader():
@@ -61,14 +70,14 @@ def auto_url_authorization(url):
                                       "/html/body/div[1]/div[1]/div[2]/div/div/div/div[2]/form/fieldset/div[1]/input")
     # sending the email as input to the above field
     email_input_box.send_keys(CONFIG['EMAIL_ID'])
-    print("🔱 Sending the EMAIL ID...")
+    print(f"🔱 Sending EMAIL ID...")
 
     # grabbing the password field
     password_textbox = element_grabber(driver,
                                        "/html/body/div[1]/div[1]/div[2]/div/div/div/div[2]/form/fieldset/div[2]/input")
     # sending the password as input to the above field
     password_textbox.send_keys(CONFIG['PASSWORD'])
-    print("🔑 Sending the Password... ")
+    print(f"🔑 Sending Password...")
     # grabbing sign in button
     sign_btn = element_grabber(driver,
                                "/html/body/div[1]/div[1]/div[2]/div/div/div/div[2]/form/fieldset/div[5]/input")
@@ -84,19 +93,13 @@ def auto_url_authorization(url):
         return 200
 
 
-def clean_up(files):
+def clean_up():
     """
     Cleans up redundant files in the respository
-    :param files: List
-    :return:
     """
     try:
-        os.remove("./static/auth.ini")
-        for file in files:
-            file.close()
-    except FileNotFoundError as fileE:
-        print("File Not Found : auth.ini")
-        print(fileE)
+        if os.path.isfile("./static/auth.ini"):
+            os.remove("./static/auth.ini")
     except Exception as E:
         print("Error in removing auth.ini. Kindly remove it manually !")
         print(E)
@@ -109,10 +112,10 @@ def config_reader():
     CONFIG = dict()
 
     # for Aditya
-    config.read("D:/Projects/config/config2.ini")
+    # config.read("D:/Projects/config/config2.ini")
 
     # for Manel
-    # config.read("./config.ini")
+    config.read("./config.ini")
 
     CONFIG['CLIENT_KEY'] = config['credentials']['client_key']  # str
     CONFIG['CLIENT_SECRET'] = config['credentials']['client_secret']  # str
@@ -129,6 +132,8 @@ def config_reader():
 
     CONFIG['FILETYPE'] = config['settings']['filetype']
 
+    CONFIG['TIMEOUT'] = config['settings']['timeout']
+    CONFIG['TICK'] = config['settings']['tick']
     return CONFIG
 
 
@@ -142,19 +147,6 @@ def element_grabber(driver, param, by_type="xpath"):
     return element
 
 
-def file_creator(filenames):
-    """
-    Creates files according to the names gives
-    :param filenames: List
-    :return:
-    """
-    files = []
-    for filename in filenames:
-        file = open(f"./static/{filename}", "w", encoding="utf-8", newline='')
-        files.append(file)
-    return files
-
-
 def get_api_response(url):
     # requesting response from url
     response = requests.get(url)
@@ -164,17 +156,17 @@ def get_api_response(url):
 
 def get_auth_api_response(url, field, value, page=1):
     """
-
-    :param url: strin
+    Get OAuth requiring API hit request
+    :param url: str
     :param field: str
     :param value: str
     :param page: int
     :return: tuple
     """
     key, secret, access_token, access_token_secret = config_reader()['CLIENT_KEY'], \
-        config_reader()['CLIENT_SECRET'], \
-        auth_config_reader()['ACCESS_TOKEN'], \
-        auth_config_reader()['ACCESS_TOKEN_SECRET']
+                                                     config_reader()['CLIENT_SECRET'], \
+                                                     auth_config_reader()['ACCESS_TOKEN'], \
+                                                     auth_config_reader()['ACCESS_TOKEN_SECRET']
     url = url.replace(field, value)
     print(f"URL ==> {url}")
     new_session = OAuth1Session(
@@ -190,6 +182,7 @@ def get_auth_api_response(url, field, value, page=1):
 
 def get_page_content_response(url):
     # requesting response from url
+    print(url)
     response = requests.get(url)
     # converting response_xml to dict
     return make_html_soup(response.content.decode('utf-8', 'ignore'))
@@ -207,7 +200,6 @@ def oauth_validator():
     """
     CONFIG = config_reader()
     key, secret = CONFIG['CLIENT_KEY'], CONFIG['CLIENT_SECRET']
-
     #  initialising OAuth Service
     goodreads = OAuth1Service(
         consumer_key=key,
@@ -252,7 +244,7 @@ def perform_parallel_tasks(function, items) -> List:
     # performs parallel tasks with tool(`function`) on list(`items`)
     results = []
     # using multithreading concept to fasten the web pull
-    with ThreadPoolExecutor(50) as executor:
+    with ThreadPoolExecutor(100) as executor:
         # executing GET request of link asynchronously
         futures = []
         for item in items:
@@ -288,6 +280,7 @@ def response_to_json_dict(response):
         dict_response = json.loads(json_response)
     else:
         print(f"Response Status Code : {response.status_code} ❌", end="\n\n")
+        alert()
 
     return dict_response, json_response
 
@@ -392,3 +385,16 @@ def write_reviewer_object_to_file(file, reviewer=None, mode="normal"):
             ])
 
         file.flush()
+
+
+def wait_and_oauth(oauth=False):
+    CONFIG = config_reader()
+    TIMEOUT = int(CONFIG['TIMEOUT'])
+    TICK = float(CONFIG['TICK'])
+    sleep_time = [i for i in range(TIMEOUT)]
+    print(f"API Threshold reached")
+    print(f"Setting Sleep timer to {TIMEOUT*TICK} secs.")
+    for i in tqdm(sleep_time):
+        time.sleep(TICK)
+    if oauth:
+        oauth_validator()

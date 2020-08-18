@@ -55,7 +55,8 @@ def book_provider(dict_response, json_response):
         if isbn13 is None:
             isbn13 = re.findall(r'ISBN13: (\d{13})', json_response)
             if len(isbn13) == 0:
-                print("ISBN13 Not Found !\n")
+                # print("ISBN13 Not Found !\n")
+                pass
             else:
                 book = book.hasISBN13(isbn13[0])
         else:
@@ -110,8 +111,12 @@ def reviews_provider(soup):
 
     # scraping page URL off the review page
     page_url = soup.find('link').get('href')
+
     # using REGEX expression to extract review_id
-    review_id = re.findall(r'(\d{1,13})', page_url)[0]
+    review_id = re.findall(r'(\d{1,13})', page_url)
+    if len(review_id) == 0:
+        return None
+    review_id = review_id[0]
     # adding review_id
     review = review.hasReviewID(review_id)
 
